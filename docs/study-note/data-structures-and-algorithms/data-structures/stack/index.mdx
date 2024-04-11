@@ -1,0 +1,208 @@
+---
+sidebar_position: 1
+title: 集合(三)栈
+sidebar_label: 集合(三)栈
+---
+
+## 栈的方法
+- int size()
+- boolean isEmpty()
+- void push(E e)  压栈
+-    E pop()      弹栈
+  -  E peek()
+  - int search(E e)
+## 代码示例（由于都经过“规范”编写，所以代码一致）
+### 栈接口
+```java
+package com.zxs.structure.stack;
+
+/**
+ * @author 策君丶
+ * @Note 栈
+ * @create_date 2021-10-15  12:34:30
+ * @Message
+ */
+public interface MyStack<E> {
+
+    int size();
+
+    boolean isEmpty();
+
+    void push(E e);
+
+    E pop();
+
+    E peek();
+
+    int search(E e);
+}
+```
+### 动态数组
+```java
+package com.zxs.structure.stack;
+
+import com.zxs.structure.list.MyArrayList;
+
+/**
+ * @author 策君丶
+ * @note 基于动态数组实现
+ * @create_date 2021-10-15  22:41:23
+ * @Message
+ */
+public class MyStackArray<E> implements MyStack{
+
+    private MyArrayList<E> list;
+
+    public MyStackArray(int capacity) {
+        list = new MyArrayList<>(capacity);
+    }
+
+    public MyStackArray() {
+        list = new MyArrayList<>();
+    }
+
+    @Override
+    public int size() {
+        return list.size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return list.isEmpty();
+    }
+
+    @Override
+    public void push(Object o) {
+        list.add((E) o);
+    }
+
+    @Override
+    public E pop() {
+        E e = peek();
+        list.remove();
+        return e;
+    }
+
+    @Override
+    public E peek() {
+        return list.get(list.size() - 1);
+    }
+
+    @Override
+    public int search(Object o) {
+        return list.findFirst((E) o);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < list.size(); i++) {
+            sb.append(list.get(i)).append(",");
+        }
+        if(sb.length() == 1){
+            sb.append("]");
+        }else {
+            sb.replace(sb.length()-1,sb.length(),"]");
+        }
+        return sb.toString();
+    }
+}
+```
+### 单链表
+```java
+package com.zxs.structure.stack;
+
+import com.zxs.structure.list.SingleList;
+
+/**
+ * @author 策君丶
+ * @Note 基于单链表简单实现栈
+ * @create_date 2021-10-15  22:46:58
+ * @Message
+ */
+public class MyStackSingleList<E> implements MyStack{
+
+    private SingleList<E> list;
+
+    @Override
+    public int size() {
+        return list.size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return list.isEmpty();
+    }
+
+    @Override
+    public void push(Object o) {
+        list.add((E) o);
+    }
+
+    @Override
+    public E pop() {
+        E e = list.get(size() - 1);
+        list.remove();
+        return e;
+    }
+
+    @Override
+    public Object peek() {
+        return list.get(size() - 1);
+    }
+
+    @Override
+    public int search(Object o) {
+        return list.findFirst((E) o);
+    }
+}
+```
+### 双链表
+```java
+package com.zxs.structure.stack;
+
+import com.zxs.structure.list.DoubleList;
+
+/**
+ * @author 策君丶
+ * @Note 基于双链表实现栈
+ * @create_date 2021-10-15  22:53:15
+ * @Message
+ */
+public class MyStackDoubleList<E> implements MyStack{
+
+    private DoubleList<E> list;
+
+    @Override
+    public int size() {
+        return list.size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return list.isEmpty();
+    }
+
+    @Override
+    public void push(Object o) {
+        list.add((E) o);
+    }
+
+    @Override
+    public E pop() {
+        E e = list.get(size() - 1);
+        list.remove();
+        return e;
+    }
+
+    @Override
+    public E peek() {
+        return list.get(size() - 1);
+    }
+
+    @Override
+    public int search(Object o) {
+        return list.findFirst((E) o);
+    }
+}
+```

@@ -1,0 +1,413 @@
+---
+sidebar_position: 1
+title: 基于openresty的高性能网关设计
+sidebar_label: 基于openresty的高性能网关设计
+---
+
+## 网关的功能
+- **请求路由**：根据请求的路径或其他标识，将请求转发到相应的后端服务
+- **访问控制**：对请求进行认证和授权，确保只有授权用户可以访问特定的资源
+- **负载均衡**：将请求分发到多个后端服务器，以提高系统的稳定性和性能
+- **缓存**：缓存频繁请求的响应，以减少对后端服务器的访问，提高响应速度
+- **日志记录**：记录请求和响应的相关信息，用于监控和故障排除
+
+## Nginx
+- **反向代理**：将客户端的请求转发给后端服务器，并将响应返回给客户端
+- **静态文件服务**：快速地提供静态文件，如HTML、CSS、JavaScript等
+- **负载均衡**：基于不同的算法，将请求分发给多个后端服务器
+- **SSL/TLS终端**：对客户端和后端服务器之间的通信进行加密和解密
+
+好的，我们可以发现nginx可以完成网关基础的功能，而鉴权、访问控制以及日志记录这些我们都可以使用lua插件对nginx进行补足。
+```json
+	    location /api/ {
+	        proxy_pass http://proxy_host:proxy_port/;
+	    }
+```
+上面是一个 /api/** 路径路由的代理配置,下游是http://proxy_host:proxy_port/，但并不是每一个服务都会将整个服务暴露出来，多数服务可能只想暴露一套对外的接口，所以路由需要两个对象来表示，service表示下游，api表示配置。
+```json
+            # service_proxy_path: 网关代理服务前缀
+            # service_proxy_path: 网关代理API开放路径
+            # service_address: 下游真实地址
+            # api_path: API真实路径
+            location /{service_proxy_path}/${api_open_path}/ {
+	        proxy_pass http://${service_address}/${api_path}/;
+	    }
+````
+添加完配置后，执行命令即可刷新路由
+```shell
+nginx -s reload
+```
+我们都可以通过shell脚本定时查询services、api信息，然后写入文件，执行命令刷新路由。
+
+## OpenResty
+openresty对于nginx的请求是提供了大量SPI的
+- **init_by_lua**：
+
+功能：Nginx 工作进程启动时执行 Lua 代码，用于初始化工作。
+
+常用方法：一般用于加载配置、初始化全局变量、预先加载 Lua 模块等。例如上一项中提到的动态路由，就可以通过lua脚本进行初始化以及事件触发动态添加。
+- **ssl_handshake_by_lua**：
+
+功能：在 SSL 握手过程中执行 Lua 代码。
+
+常用方法：用于在 SSL 握手时执行一些自定义的逻辑，如检查证书、动态设置 SSL 配置等。
+- **access_by_lua**：
+
+功能：在处理请求的访问控制阶段执行 Lua 代码。
+
+常用方法：用于请求认证、访问控制、请求日志等。
+
+- **content_by_lua**：
+
+功能：在处理请求的内容生成阶段执行 Lua 代码。
+
+常用方法：用于生成动态内容、处理请求体、处理响应等。
+- **header_filter_by_lua** ：
+
+功能：在处理响应头部的过滤阶段执行 Lua 代码。
+
+常用方法：用于添加、修改、删除响应头部信息。
+- **body_filter_by_lua**：
+
+功能：在处理响应体的过滤阶段执行 Lua 代码。
+
+常用方法：用于处理响应体，如内容修改、压缩、过滤等。
+- **log_by_lua**:
+
+功能：在记录请求日志的阶段执行 Lua 代码。
+
+常用方法：用于记录请求信息到日志文件、上报到监控系统等。
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    # 初始化工作
+    # 等效于使用文件 init_by_lua lua_file_path;
+    init_by_lua_block {
+        -- 初始化工作
+    }
+
+    # SSL 握手过程中执行 Lua 代码
+    ssl_handshake_by_lua_block {
+        -- 在 SSL 握手过程中执行 Lua 代码
+    }
+
+    location / {
+        # 访问控制阶段执行 Lua 代码
+        access_by_lua_block {
+            -- 认证、访问控制、日志等逻辑
+        }
+
+        # 内容生成阶段执行 Lua 代码
+        content_by_lua_block {
+            -- 处理请求内容、生成响应等逻辑
+        }
+
+        # 响应头部过滤阶段执行 Lua 代码
+        header_filter_by_lua_block {
+            -- 处理响应头部的过滤逻辑
+        }
+
+        # 响应体过滤阶段执行 Lua 代码
+        body_filter_by_lua_block {
+            -- 处理响应体的过滤逻辑
+        }
+
+        # 记录请求日志阶段执行 Lua 代码
+        log_by_lua_block {
+            -- 记录请求日志的逻辑
+        }
+    }
+}
+```
+在这个流程中，我们可以进行加入我们自定义的方法执行。一般来说我们会使用大量的脚本处理请求，所以只需要一个入口就可以了。
+我选择content_by_lua作为插件链式调用的入口
+- 完整的请求上下文：可以访问完整的请求和响应对象，包括请求头、请求体、响应头等
+- 灵活性和可定制性：允许完全定制请求的处理逻辑，包括路由、鉴权、数据转换等
+- 方便的调试和测试：只要将ngx的操作抽象出来本地和openresty各自实现，就可以在本地开发调试
+- 易于维护和扩展：仅使用一个lua接口，可以降低代码的复杂性，并且更容易扩展和修改
+
+## 设计与实现
+### 准备工作
+想要在OpenResty中使用自己的插件或依赖、进行一些初始化操作就需要进行一些基础的配置
+```json tilte=nginx.conf
+    # 动态生成conf文件的地址
+     include       /usr/local/openresty/nginx/conf/conf.d/*.conf;
+    #配置自定义插件和lua的依赖地址
+    lua_package_path "/usr/local/openresty/scripts/?.lua;/usr/local/openresty/scripts/*/?.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/?.lua;;";
+    #配置共享库
+    lua_package_cpath "/usr/lib64/lua/5.1/?.so;;";
+    # 配置nginx启动时初始化行为，动态路由写入，插件读取等等
+    init_by_lua_file "/usr/local/openresty/scripts/init.lua";
+    # 配置共享内存，方便lua操作
+    lua_shared_dict my_dict 10m;
+```
+
+### 动态路由
+上面已经提到了nginx配合shell的动态刷新。我们使用lua也是一样的，lua需要完成的功能如下：
+- 初始化路由：在启动时加载初始路由配置，并将其应用到路由表中。
+- 事件触发刷新路由：通过事件触发或定时任务，实现动态刷新路由配置。
+- 路由持久化：将路由配置持久化到数据库或其他存储中，以便下次启动时加载。
+
+实现思路：
+抽象出一个专职路由的lua插件，提供路由的初始化、版本对比、路由更新、持久化(管理后台数据库持久化，网关端文件持久化)，每次更新后调用reload。
+![route_refresh](https://www.zxsvici.top/img/route_refresh.png)
+示例
+```lua
+-- 全局变量，用于缓存路由列表
+local cached_routes = shared_data:get("cached_routes")
+
+-- 初始化路由（从数据库中加载路由列表）
+function init()
+    -- 如果缓存中没有路由列表，则从数据库中加载
+    -- 预防无限重复reload
+    if not cached_routes then
+        cached_routes = load_routes_from_database()
+        write_conf()
+    end
+end
+
+-- 更新路由（根据缓存的路由列表更新数据库）
+function update()
+    -- 从数据库中查询最新的路由操作日志列表
+    local updated_routes = query_routes_from_database()
+
+    -- 对比缓存的路由列表和最新的路由列表，更新缓存
+    if update_cached_routes(updated_routes) then
+        write_conf()
+    end
+end
+
+-- 加载路由列表（从数据库中加载）
+function load_routes_from_database()
+    -- 实现从数据库中加载路由列表的逻辑
+end
+
+-- 查询最新的路由操作日志列表（从数据库中查询）
+function query_routes_from_database()
+    -- 实现从数据库中查询最新路由列表的逻辑
+end
+
+-- 更新缓存的路由列表
+function update_cached_routes(updated_routes)
+    -- 实现对比和更新缓存的路由列表的逻辑
+end
+
+-- 更新nginx配置
+function write_conf()
+    -- 写文件
+end
+
+```
+
+### 动态插件
+Lua 可以完成以下动态插件管理功能：
+- 初始化插件列表：在启动时加载初始插件列表，并将其应用到插件表中。
+- 插件链路绑定：将插件与路由、集群进行绑定，确保插件在指定路由上生效。
+- 事件触发刷新插件：同路由
+- 插件信息持久化：同路由
+
+插件的基本结构：
+- init.lua： 用于插件的初始化，加载其他文件或进行全局设置
+- config.lua： 如果你的插件需要配置项，可以将配置相关的逻辑放在这个文件中
+- schema.lua：定义和验证配置项的结构、低代码生成配置表单
+- handle.lua：插件的处理逻辑
+![plugin_stru](https://www.zxsvici.top/img/plugin_stru.png)
+插件生命周期：
+![plugin_refresh](https://www.zxsvici.top/img/plugin_refresh.png)
+```lua
+
+-- 全局变量，用于缓存插件信息
+local cached_plugins = {}
+
+-- 插件对象构造函数
+local Plugin = {}
+Plugin.__index = Plugin
+
+-- 创建新的插件对象
+function Plugin.new(name, version, params, instance)
+    local self = setmetatable({}, Plugin)
+    self.name = name
+    self.version = version
+    self.params = params
+    self.instance = instance
+    return self
+end
+
+-- 初始化操作
+function init()
+    -- 读取所有插件信息
+    local db_plugins = query_plugins_from_database() -- 从数据库中查询插件信息
+    local local_plugins = scan_local_plugin_files() -- 扫描本地文件夹中的插件文件
+
+    -- 对比本地文件和数据库中的插件信息
+    for _, db_plugin in ipairs(db_plugins) do
+        for _, local_plugin in ipairs(local_plugins) do
+            -- 如果插件在本地文件夹和数据库中都存在，并且版本一致，则跳过
+            if db_plugin.name == local_plugin.name and db_plugin.version == local_plugin.version then
+                break
+            end
+
+            -- 如果插件在本地文件夹存在但数据库中不存在，或者版本不一致，则需要主动发起同步请求
+            if db_plugin.name == local_plugin.name then
+                synchronize_plugin(db_plugin) -- 发起同步请求
+                break
+            end
+        end
+    end
+
+    -- 将最新的插件信息写入内存
+    loading(db_plugin)
+end
+
+-- 更新操作
+function update()
+    -- 数据库读取最新操作日志信息
+    local latest_operation_logs = query_latest_operation_logs()
+
+    -- 遍历最新的操作日志
+    for _, log in ipairs(latest_operation_logs) do
+        local db_plugin = query_plugin_by_name(log.plugin_name) -- 根据日志中的插件名从数据库中读取插件信息
+        local local_plugin = find_local_plugin_by_name(log.plugin_name) -- 在本地文件夹中查找对应的插件文件
+
+        -- 如果插件在数据库中不存在，则跳过
+        if not db_plugin then
+            break
+        end
+
+        -- 对比数据库中的插件和本地文件夹中的插件信息
+        if local_plugin and local_plugin.version == db_plugin.version then
+            -- 如果插件在本地文件夹和数据库中都存在，并且版本一致，则需要主动发起同步请求
+            synchronize_plugin(db_plugin) -- 发起同步请求
+        elseif local_plugin then
+            -- 如果插件在本地文件夹存在但数据库中不存在，或者版本不一致，则更新内存中的插件信息
+            loading(db_plugin)
+        end
+    end
+end
+
+-- 批量读取插件
+function loading(db_plugin)
+    -- 将插件实例和信息都保存到内存中
+end
+
+-- 单个读取
+function load(plugin)
+    -- 插件初始化 init.lua config.lua schema.lua
+    -- 构造 Plugin
+    -- return
+end
+```
+插件在请求响应中的执行流程：
+![plugin_request_apply](https://www.zxsvici.top/img/plugin_request_apply.png)
+```json
+
+    location /path {
+        -- 处理入口
+        content_by_lua        /path/handler.lua;
+    }
+```
+```lua
+-- 路由匹配函数
+function match_route(request_path)
+    -- 获取路由与插件的绑定关系表
+    local route_plugin_bindings = get_route_plugin_bindings()
+
+    -- 遍历路由与插件的绑定关系表，查找匹配的路由
+    for route, plugins in pairs(route_plugin_bindings) do
+        -- 如果请求路径匹配到某个路由，则返回该路由对应的插件列表
+        if request_path:find(route) then
+            return plugins
+        end
+    end
+
+    -- 如果没有匹配到任何路由，则返回 nil
+    return nil
+end
+
+-- 处理请求
+function handle_request(request_path)
+    -- 拿到内存中的插件列表
+    local plugins = get_cached_plugins()
+
+    -- 匹配获取对应路由，拿到插件列表(有序)
+    local route_plugins = match_route(request_path)
+
+    -- 如果找不到对应路由的插件列表
+    if not route_plugins then
+        return ERR_MSG
+    end
+
+    -- 依次调用 preHandle 方法
+    for _, plugin_name in ipairs(route_plugins) do
+        local plugin = plugins[plugin_name]
+        if plugin and plugin.preHandle then
+            plugin:preHandle()
+        end
+    end
+
+    -- 转发请求并获取响应
+    local response = forward_request(request_path)
+
+    -- 依次调用 afterCompletion 方法（倒序）
+    for i = #route_plugins, 1, -1 do
+        local plugin_name = route_plugins[i]
+        local plugin = plugins[plugin_name]
+        if plugin and plugin.afterCompletion then
+            plugin:afterCompletion(response)
+        end
+    end
+
+    -- 返回处理完毕的响应
+    return response
+end
+
+-- 获取内存中的插件列表
+function get_cached_plugins()
+end
+
+-- 转发请求并获取响应
+function forward_request(request_path)
+    -- 在这里执行请求转发逻辑，并获取响应
+    -- 也可以自行设计转发
+end
+
+-- 获取路由与插件的绑定关系表
+function get_route_plugin_bindings()
+end
+```
+
+### 集群设计
+- 节点同步：确保集群中各个节点的路由和插件配置保持同步。
+路由的同步由监听同一个库实现，插件的同步由数据库和文件扫描交互共同完成
+- 负载均衡：在集群中实现负载均衡，将请求均匀地分发到各个节点上，以提高系统的性能和可靠性。
+集群的负载可以通过配置conf实现，而路由的负载可以通过插件的形式配置。
+集群的所有为简化处理，节点均为无状态节点，连接同一个库，配置完全一致，集群交互通过固定的接口，节点信息上报统一提交db。
+
+### 业务接口(管理后台)
+- 服务配置： 配置下游服务的基本信息，如服务名称、地址、端口等
+- 接口配置： 配置具体接口的路由规则、请求转发方式等。
+- 消费配置：配置上游访问下游服务的鉴权信息，基于插件实现。
+- 插件配置：提供多版本管理，配置和管理各种插件的参数和行为。
+- 集群配置：用于配置和管理集群节点的基础信息，如节点地址、负载均衡策略等。
+普普通通没什么好说的，就是管理后台。
+
+### 数据结构
+- 服务Service
+- API定义
+- API发布
+- 应用APP
+- 集群
+- APP-API
+- Service-Cluster
+- 插件(有生效范围，支持全结构绑定)
+- 操作日志(各种增删改查的记录，用于刷新时快速定位记录)
+
+## 测试
+![cloud-gateway](https://www.zxsvici.top/img/cloud-gateway.png)
+![nginx](https://www.zxsvici.top/img/nginx.png)
+![self](https://www.zxsvici.top/img/self.png)
+对比中只有spring cloud gateway收到了伤害，tps稍低，延迟略高，内存消耗大。
+只要我不写很复杂的插件，性能就是原生的nginx，笑死。

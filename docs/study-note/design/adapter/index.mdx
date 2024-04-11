@@ -1,0 +1,114 @@
+---
+sidebar_position: 1
+title: 适配器模式
+sidebar_label: 适配器模式
+---
+
+## 基本概念
+
+适配器模式是一种结构型设计模式，它允许将一个类的接口转换成客户端期望的另一个接口。适配器让原本接口不兼容的类可以合作无间。
+
+## 结构
+
+适配器模式可以分为两种：
+
+- **对象适配器**：通过组合方式实现适配器，将适配器对象包装在目标接口实现类中。
+- **类适配器**：通过多重继承的方式实现适配器，让适配器类同时继承目标接口和被适配者类。
+
+## 案例
+
+### 对象适配器模式
+```java
+// 新的被适配者：猫接口
+interface Cat {
+    void meow();
+    void jump(); // 改变猫的跳跃行为
+}
+
+// 具体的被适配者：普通猫
+class OrdinaryCat implements Cat {
+    @Override
+    public void meow() {
+        System.out.println("Meow Meow!");
+    }
+
+    @Override
+    public void jump() {
+        System.out.println("I am Jumping!");
+    }
+}
+
+// 对象适配器：将猫适配成狗
+class CatAdapter implements Dog {
+    private Cat cat;
+
+    public CatAdapter(Cat cat) {
+        this.cat = cat;
+    }
+
+    @Override
+    public void bark() {
+        cat.meow(); // 猫的喵喵声适配成狗的汪汪声
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Running like a Dog!"); // 狗的奔跑行为
+    }
+}
+
+// 类适配器：通过继承实现适配器
+class CatAdapter2 extends OrdinaryCat implements Dog {
+    @Override
+    public void bark() {
+        super.meow(); // 直接调用被适配者的方法
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Running like a Dog!"); // 狗的奔跑行为
+    }
+}
+
+// 适配器示例
+public class AdapterExample {
+    public static void main(String[] args) {
+        // 对象适配器示例
+        Cat cat = new OrdinaryCat();
+        Dog dog1 = new CatAdapter(cat);
+        testDog(dog1); // 测试狗的方法
+
+        // 类适配器示例
+        Dog dog2 = new CatAdapter2();
+        testDog(dog2); // 测试狗的方法
+    }
+
+    // 测试狗的方法
+    public static void testDog(Dog dog) {
+        dog.bark();
+        dog.run();
+    }
+}
+```
+Cat 接口代表猫，OrdinaryCat 类代表普通猫，CatAdapter 和 CatAdapter2 分别代表对象适配器和类适配器。
+通过这个示例，我们展示了适配器模式的灵活性，即可以适配不同的被适配者和行为，而不影响客户端的代码。
+
+### 类适配器
+```java
+// 类适配器：通过继承实现适配器
+class CatAdapter2 extends OrdinaryCat implements Dog {
+    @Override
+    public void bark() {
+        super.meow(); // 直接调用被适配者的方法
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Running like a Dog!"); // 狗的奔跑行为
+    }
+}
+```
+CatAdapter2 类直接继承了 OrdinaryCat 类，并实现了 Dog 接口。通过继承的方式，CatAdapter2 类同时具有了猫和狗的行为，而不需要额外持有一个猫的实例。这符合类适配器的定义。
+
+## 总结
+适配器模式允许将一个类的接口转换成客户端期望的另一个接口，使得原本不兼容的类可以合作无间。对象适配器和类适配器采用不同的实现方式，但都能达到适配的效果。在实际应用中，根据具体情况选择合适的适配器模式实现方式。

@@ -1,0 +1,112 @@
+---
+sidebar_position: 1
+title: 策略模式
+sidebar_label: 策略模式
+---
+
+## 一、基本概念
+
+策略模式是一种**行为型**设计模式，旨在针对一组算法，将每一个算法封装到具有共同接口的独立类中，使得它们可以相互替换。这样做的好处是，算法的变化不会影响到客户端的使用，从而提高了系统的灵活性和可维护性。
+
+
+## 二、结构
+
+策略模式包含三类角色：
+
+- **环境(Context)角色**：持有一个`Strategy`的引用，并通过该引用调用具体的策略。
+- **抽象策略(Strategy)角色**：定义了所有具体策略类所需的接口或抽象类。
+- **具体策略(ConcreteStrategy)角色**：包装了相关的算法或行为。
+
+![](http://www.vicizxs.fun/img/01_stratgy_01.png)
+
+## 三、案例
+
+在现有框架中，策略模式常用于实现各种可插拔的行为。以下是几个典型的案例：
+
+### **Spring框架中的AOP（面向切面编程）**
+AOP允许将横切关注点（如日志、事务、安全等）从主要业务逻辑中分离出来，并将其应用于特定的连接点。在AOP中，不同的通知（Advice）就是具体的策略，而切面（Aspect）充当了环境角色，负责管理各种通知的执行顺序和条件。
+
+### **Netty框架中的ChannelHandler**
+Netty是一个高性能的异步事件驱动的网络应用框架，其中的ChannelHandler就是一种具体策略，负责处理各种网络事件（如连接、读取、写入等）。而ChannelPipeline则是环境角色，负责管理ChannelHandler的执行顺序和条件。
+
+### **Quartz框架中的Job和Trigger**
+Quartz是一个开源的作业调度框架，其中的Job和Trigger就是具体策略，用于定义作业的执行逻辑和触发条件。Scheduler则是环境角色，负责管理作业的调度和执行。
+
+
+## 四、简答实现
+
+假设我们需要实现一组算法，可以对两个数进行不同的操作（如加法、减法、乘法等）。以下是一个简单的实现示例：
+
+具体代码如下：
+
+```java
+// Context 类
+public class Context {
+    private Strategy strategy;
+
+    public Context(Strategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public int executeStrategy(int num1, int num2){
+        return strategy.doOperation(num1, num2);
+    }
+}
+
+// Strategy 接口
+public interface Strategy {
+    int doOperation(int num1, int num2);
+}
+
+// 具体策略1：加法
+public class OperationAdd implements Strategy {
+    @Override
+    public int doOperation(int num1, int num2) {
+        return num1 + num2;
+    }
+}
+
+// 具体策略2：减法
+public class OperationSubstract implements Strategy {
+    @Override
+    public int doOperation(int num1, int num2) {
+        return num1 - num2;
+    }
+}
+
+// 具体策略3：乘法
+public class OperationMultiply implements Strategy {
+    @Override
+    public int doOperation(int num1, int num2) {
+        return num1 * num2;
+    }
+}
+
+// 测试类
+public class MyTest {
+    public static void main(String[] args) {
+        Context context = new Context(new OperationAdd());
+        System.out.println("9 + 3 = " + context.executeStrategy(9, 3));
+
+        context = new Context(new OperationSubstract());
+        System.out.println("9 - 3 = " + context.executeStrategy(9, 3));
+
+        context = new Context(new OperationMultiply());
+        System.out.println("9 * 3 = " + context.executeStrategy(9, 3));
+    }
+}
+```
+
+程序输出:
+
+```java
+9 + 3 = 12
+9 - 3 = 6
+9 * 3 = 27
+```
+
+## 五、总结
+
+- 策略模式的核心思想是将算法与使用者分离，使得算法可以独立变化而不影响客户端。
+- 通过策略模式，可以避免使用大量的条件判断语句，提高代码的可读性和可维护性。
+- 策略模式中的各个策略类是平等的，可以相互替换，从而灵活地应对需求变化。

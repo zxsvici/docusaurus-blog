@@ -1,0 +1,294 @@
+---
+sidebar_position: 1
+title: 集合(二)基于双向链表实现集合
+sidebar_label: 集合(二)基于双向链表实现集合
+---
+
+
+## 实现方法
+- add()      添加
+- set()      修改
+- remove()   删除
+- contains() 是否包含
+- isEmpty()  是否为空
+- get()      查找
+- getNode()  内部查找      ***核心
+## 和单链表的对比
+- 节点不同，单链表只有一个指向指针，双链表有俩分别指向前后。
+- 双链表可以从任意节点出发访问所有元素，而单链表只能从头部结点出发。
+- 单链表构造开销小，比双链表少一个指针存储空间。
+- 应用场景不同，单链表适用于数据插入、删除操作多的场景，动态数组则适用于对查询要求较高的场景，而双链表刚好介于之间，查询性能高于单链表，插入、删除性能也很强劲。
+## 查询思路
+- 双向链表，查询自然可以双向
+- 从头部节点分别往前往后探针，若查询到结束查询（ contains() )
+- 基于元素的位置选择遍历方向 （ getNode() )
+![double](http://zxsvici.fun/img/stru/double.png)
+## 代码示例
+```java
+package com.zxs.structure.list;
+
+import com.sun.istack.internal.NotNull;
+
+/**
+ * @author 策君丶
+ * @create_date 2021-10-14  20:38:16
+ * @Message
+ */
+public class DoubleList<E> {
+
+//    虚假的头部节点        真实的头部节点 ==> head.next
+    private Node head;
+
+    private int size;
+
+    public DoubleList(@NotNull Node head) {
+        this.head = head;
+        Node node = head.next;
+        while(node != null && node != head){
+            size++;
+            node = node.next;
+        }
+    }
+
+    public DoubleList(){
+        head = new Node();
+        size = 0;
+    }
+
+    public int size(){
+        return size;
+    }
+
+    public boolean isEmpty(){
+        return size == 0;
+    }
+
+    /**
+     * 基于查找的添加元素
+     * @param index
+     * @param e
+     * @return
+     */
+    public DoubleList add(int index, E e){
+        if(index > size || index < 0){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+//        Node node = head;
+//        while(index-- > 0){
+//            node = node.next;
+//        }
+//        Node target = new Node(e);
+//        target.pre = node;
+//        target.next = node.next == null ? null : node.next;
+//        node.next = target;
+//        if(node.next != null){
+//            node.next.pre = target;
+//        }
+        Node node = this.getNode(index);
+        Node target = new Node(e);
+        target.pre = node.pre;
+        node.pre.next = target;
+        node.pre = target;
+        target.next = node;
+        if(index == 0){
+            head.next = target;
+        }
+        size++;
+        return this;
+    }
+
+    /**
+     * 插入元素在队尾
+     * 这里特殊的地方在于，这是双向链表，
+     * 每次添加需要改动的都是3个元素
+     * @param e
+     * @return
+     */
+    public DoubleList add(E e){
+        Node target = new Node(e);
+        if(size == 0){
+            head.next = target;
+        }else {
+            Node node = head.next;
+            if (node.pre != null) {
+                node.pre.next = target;
+                target.pre = node.pre;
+            } else {
+                node.next = target;
+                target.pre = node;
+            }
+            node.pre = target;
+            target.next = node;
+        }
+        size++;
+        return this;
+    }
+
+    /**
+     * 添加在头部
+     * @param e
+     * @return
+     */
+    public DoubleList addFirst(E e){
+        return add(0,e);
+    }
+
+    /**
+     * 基于查找的删除
+     * @param index
+     */
+    public void remove(int index){
+        if(index >= size || index < 0){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        Node node = this.getNode(index);
+        if(size == 1){
+            head = new Node();
+        }else {
+            node.pre.next = node.next;
+            node.next.pre = node.pre;
+        }
+        size--;
+    }
+
+    /**
+     * 删除最后一个节点
+     */
+    public void remove(){
+        this.remove(size - 1);
+    }
+
+    /**
+     * 按序号查找
+     * 我认为的双向链表的核心
+     * 内部查找
+     * @param index
+     * @return
+     */
+    private Node getNode(int index){
+        if(index >= size || index < 0){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        boolean flag = index > size/2;
+        Node node = head.next;
+        /**
+         * 如果元素靠后就从后往前查，元素在前就从前往后查
+         *      0   --> index      index++                          ==>    index >  0
+         *     -1   --> index      size - (-1) - (index - 1) + 1    ==>    index <= size - index + 3
+         */
+        while(index <= size - index + 3 && index > 0){
+            if(flag){
+                index++;
+                node = node.pre;
+            }else {
+                index--;
+                node = node.next;
+            }
+        }
+        return node;
+    }
+
+    /**
+     * 查找
+     * @param index
+     * @return
+     */
+    public E get(int index){
+        return (E) getNode(index).value;
+    }
+
+    /**
+     * 修改
+     * @param index
+     * @param e
+     */
+    public void set(int index,E e){
+        if(index >= size || index < 0){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        Node node = this.getNode(index);
+        node.value = e;
+    }
+
+    /**
+     * 是否包含该元素
+     * 利用双向链表的特性，两边向中间查找
+     * @param e
+     * @return
+     */
+    public boolean contains(E e){
+        int left = 0, right = size - 1;
+        Node leftNode = head.next;
+        Node rightNode = leftNode.pre;
+        while(left <= right){
+            if(!leftNode.value.equals(e)) {
+                leftNode = leftNode.next;
+                left++;
+            }else{
+                break;
+            }
+            if(!rightNode.value.equals(e)) {
+                rightNode = rightNode.pre;
+                right--;
+            }else {
+                break;
+            }
+        }
+        return left <= right;
+    }
+
+    /**
+     * 方便测试
+     * @return
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("[");
+        Node node = head.next;
+        int index = 0;
+        while(index < size){
+            sb.append(node.toString()).append(",");
+            node = node.next;
+            index++;
+        }
+        if(sb.length() > 1) {
+            sb.replace(sb.length() - 1, sb.length(), "]");
+        }else{
+            sb.append("]");
+        }
+        return sb.toString();
+//        for (int i = 0; i < size; i++) {
+//            sb.append(this.get(i)).append(',');
+//        }
+//        return sb.replace(sb.length()-1,sb.length(),"]").toString();
+    }
+}
+
+/**
+ * 节点
+ * @param <E>
+ */
+class Node<E>{
+    public E value;
+    public Node pre;
+    public Node next;
+
+    public Node(E value, Node pre, Node next) {
+        this.value = value;
+        this.pre = pre;
+        this.next = next;
+    }
+
+    public Node(E value) {
+        this.value = value;
+    }
+
+    public Node() {
+    }
+
+    @Override
+    public String toString() {
+        return this.value.toString();
+    }
+}
+```

@@ -1,0 +1,182 @@
+---
+sidebar_position: 1
+title: 基于Netty的MQ设计与实现
+sidebar_label: 基于Netty的MQ设计与实现
+---
+
+## 提出问题
+消息中间件本质是什么？消息队列
+
+队列的核心是什么？顺序存储
+
+消息的核心问题是什么？不能出现消息丢失
+![mq_1](https://www.zxsvici.top/img/mq_1.png)
+好的这些用 jdk 本身的queue + 持久化就能够解决，他还存在什么问题？
+
+仅能自产自销，实际场景下处理消息的往往不是本身而是其他应用，所以在这里我们就需要引入一个新的分布式组件，可以是redis、zookeeper等。但是这些又会产生新的问题，消息的消费得不到好的控制。
+![mq_2](https://www.zxsvici.top/img/mq_2.png)
+如果想要控制消息的消费和提交就需要各个应用的硬编码，每个应用注重的应该专注于消息的处理，而不是去抢读取锁和提交锁，尤其是高并发的情境下代价尤为昂贵。
+![mq_3](https://www.zxsvici.top/img/mq_3.jpg)
+
+## 提出需求
+根据以上的分析，我们发现我们迫切的需要一个新的组件，这个组件要完成以下需求：
+
+### 消息分发与消费的解耦:
+- 设计一个消息中间件组件，其中包括生产者和消费者端。
+- 生产者将消息发送到消息中间件，而不需要知道消息是如何被消费者处理的。
+- 消费者从消息中间件订阅消息，而不需要知道消息是如何被生产的。
+![mq_producer_process](https://www.zxsvici.top/img/mq_producer_process.png)
+![mq_consumer_process](https://www.zxsvici.top/img/mq_consumer_process.png)
+
+### 分布式支持:
+- 使用分布式架构，将消息中间件部署在多个节点上。
+- 使用分布式协议，确保消息在不同节点间的传递和处理。
+
+### 消息持久化:
+- 在消息中间件中实现消息的持久化存储机制，将消息存储到持久化存储介质（如磁盘）上。
+- 使用写入日志的方式，确保即使在系统故障时也能够恢复消息。
+
+### 高可靠性和高可用性:
+- 设计消息中间件具备高可靠性和高可用性的特性，如故障转移、自动重启等机制。
+- 使用复制和冗余技术，确保即使部分节点出现故障，系统依然能够正常运行。
+
+### 灵活的消息传递模式:
+- 提供多种消息传递模式，如点对点、发布/订阅等。
+- 根据不同的场景和需求，灵活选择合适的消息传递模式。
+
+### 消息的消费控制:
+- 提供消费者端的控制接口，允许消费者控制消息的消费速率、重试机制等。
+- 设计消息中间件能够根据消费者的控制策略动态调整消息的消费行为。
+
+## 需求拆分和设计
+### 协议
+既然是额外的组件，一定是需要交互的。定义一个TCP协议，编写编码器、解码器，使用Netty或vertx去实现TCP交互。
+![mq_request_demo](https://www.zxsvici.top/img/mq_request_demo.png)
+客户端请求事件类型：
+- 连接：服务端分配客户端分区，预加载数据等
+- 生产：服务端存储消息用于推送
+- 拉取消费：服务端根据主题、消费者、位移量（客户端可自定义）推送消息
+- 提交消费(批量)：确认消费，服务端更新位移
+- 心跳：长连接的维护，避免重连操作导致分区重新分配
+
+### 消息持久化
+使用文件存储，有以下文件类型
+- 主题-列表关联文件：包含主题名称、消息列表文件的路径
+- 消费者-主题位移文件：记录本分区的消费者-主题位移
+- 列表文件：就是消息列表本体，使用多文件分片防止单文件过大
+- 列表分片对应位移文件：分片索引文件，记录分片对应的位移，方便快速定位
+- 主题-分区文件：记录 主题-分区-副本-节点信息
+- 分区位移文件：各分区的消费位移
+
+编码要点
+- 设计简洁的文件协议：定义清晰简洁的文件存储格式，方便读写和解析
+- 使用预读：利用预读技术提高文件读取的效率，减少IO操作的次数
+- 追加写：采用追加写的方式向文件中写入数据，避免频繁的文件写入和文件分片操作，提高写入性能和持久化效率
+
+### 分布式
+![mq_cluster](https://www.zxsvici.top/img/mq_cluster.png)
+在此架构中，内部通信使用 Raft 进行选举以确定主/协调节点。单节点中不存在master调节，仅进行伪分区、伪副本。
+- **高可用**：分区数据有多个副本存放在不同节点上，当节点发生故障时，主节点会重新选定其他节点的副本成为新的领导者。
+- **高性能**：采用高性能框架 Netty 进行通信，消息数据通过分区机制均匀分布。同时，简洁的文件协议和文件预读缓存可以加速更新写入和消息推送。
+- **高可靠性**：系统提供分区副本机制、数据同步机制、数据持久化和消息确认机制，确保数据的安全性和可靠性。
+
+分区副本
+```
+         +----------------------------------------------+
+          |                            Partition                            |
+          +---------------------------------------------+
+          | Replica 1      |      Replica 2    |    Replica 3     |
+          +----------------------+----------------------+
+          |    Node 1     |      Node 2      |    Node 3        |
+          +----------------------+----------------------+
+```
+
+数据同步
+```
+    A[Leader] -->|写入成功| B[Replica 1];
+    A -->|写入成功| C[Replica 2];
+    A -->|写入成功| D[Replica 3];
+
+```
+消息确认
+```
+    A[Producer] -->|发送消息| B((Broker));
+    B -->|写入消息到Leader| C[Leader];
+    C -->|写入成功| D[Broker];
+    D -->|返回ACK| A;
+    D -->|消息同步到Replicas| E[Replicas];
+    E -->|写入成功| F[Broker];
+    F -->|返回ACK| A;
+```
+### 其他
+- **负载均衡**：集群master节点在客户端进行连接时，分配分区。提供基础的四种策略。
+- **扩展**：新增节点必须至少知晓一个集群内节点的地址，从而获取整个集群的信息。水平扩展限制比较大，可通过引入分布式组件解决。
+- **监控和告警**：通过实时监控系统的运行状态和性能指标，及时发现异常情况并进行告警和处理。
+- **鉴权**：通过合理的安全策略和措施确保系统的数据安全性和用户隐私保护。
+
+## 项目实现
+项目结构
+![mq_project_cut](https://www.zxsvici.top/img/mq_project_cut.png)
+### 实现功能
+- 普通队列：生产者将消息发送到队列中，消费者按照消息的入队顺序进行消费。**仅单分区能保证消息的绝对顺序，多分区仅能保证分区自身顺序**
+- 死信队列：需在主题创建时声明 **消费次数** 判定，达到阈值后发送至死信队列
+- 延时队列：多用于延时任务。宕机重启会检查所有延时队列，超过阈值的需要推送、告警。
+- 发布订阅：请尽量使用普通，该项不支持消费回滚，仅作为额外提供的能力。
+### 快速使用
+```shell
+git clone https://github.com/vicizxs/vici_mq
+mvn install
+mvn build
+mvn deploy
+```
+启动服务端
+```shell
+tar zxvf vici-mq-server-1.0.1-SNAPSHOT.tar.gz
+cd bin
+# 可以修改配置
+vim ../conf/application-prod.yml
+./service.sh start daemon
+# 检查运行情况和端口
+tail -200f ../logs/xxxx.xx.xx.0.log
+netstat -tnpl | grep 7791
+```
+客户端引用
+```xml
+        <dependency>
+            <groupId>com.zxs.vici</groupId>
+            <artifactId>vici-mq-client</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+```
+代码使用：
+
+生产
+```java
+    send(@NonNull String topic, @NonNull T data) {}
+
+    send(@NonNull String topic, Integer partition, @NonNull T data) {}
+
+    send(@NonNull String topic, Integer partition, Long timestamp, @NonNull T data) {}
+
+   public void demoProduce() {
+        viciTemplate.send("test", "sb").addCallback(
+                success -> {
+                    //TODO
+                }, (error) -> {
+                    //TODO
+                });
+        ...
+   }
+```
+消费
+```java
+    @ViciListener(topics = "topic-test", consumer = "consumer -one")
+    public void demoConsumer(ConsumerRecord<String, String> record, Acknowledgment ack, @Header("topic") String topic) {
+        Optional.ofNullable(record.value()).ifPresent(value ->
+                // TODO
+        );
+        ack.acknowledge();
+    }
+```
+
+<a href="https://www.zxsvidi.com/file/vici_mq.7z">下载源码</a>

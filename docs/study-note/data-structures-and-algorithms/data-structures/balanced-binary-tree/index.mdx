@@ -1,0 +1,236 @@
+---
+sidebar_position: 1
+title: 平衡二叉树
+sidebar_label: 平衡二叉树
+---
+
+## 特点
+- 首先二叉平衡树是自平衡的二叉排序树。（即平衡二叉树中的任意子树的左子树和右子树的高度差不会超过1）
+- 二叉平衡树的任意子树也是二叉平衡树。<br/>
+为什么要有二叉平衡树，在树的第一篇我就提到了，树的查询效率因为将容量转成深度由 O（n) 降到了 O(log n)。而普通的二叉排序树在插入有序数据时，会退化成链表，这显然有违我们的初衷。为了稳定二叉排序树的查询效率，我们可以对它的添加、删除做处理，使其始终呈现一棵树的高效。
+## 二叉平衡树中的方法
+### 添加元素
+- 前面步骤和二叉排序树一样。
+- 在插入节点完成后，不断根据返回的节点检查当前子树是否平衡并调整。
+- 结束条件，递归到根节点校验并调增完毕。
+### 移除元素
+- 前面步骤和二叉排序树一样。
+- 在删除节点完成后，不断根据返回的节点检查当前子树是否平衡并调整。
+- 结束条件，递归到根节点校验并调增完毕。
+### 平衡类型
+- 根据传入的节点，比较其左子树与右子树的高度，返回高度差
+### 旋转
+- 根据平衡类型，旋转调整方法
+- LL type：即插入节点在当前节点左边的左边，action：当前节点右旋
+- RR type：即插入节点在当前节点右边的右边，action：当前节点左旋
+- LR type：即插入节点在当前节点左边的右边，action：左子树右旋后当前节点左旋
+- RL type：即插入节点在当前节点右边的左边，action：右子树左旋后当前节点右旋
+## 代码示例
+```java
+package com.zxs.structure.tree;
+
+/**
+ * @author 策君丶
+ * @create_date 2021-10-19  20:57:53
+ * @Message 二叉平衡树
+ */
+public class AVLTree<E extends Comparable<E>> {
+
+    private Node root;
+
+    private int size;
+
+    public AVLTree(){
+        root = null;
+        size = 0;
+    }
+
+    public int size(){
+        return size;
+    }
+
+    public boolean isEmpty(){
+        return size == 0;
+    }
+
+    public int height(){
+        return TreeUtil.getHeight(this.root);
+    }
+
+    /**
+     * 获取当前节点平衡类型，（当前节点的左高 - 右高）> 0 ? L : R,（当前节点子树的左高 - 右高）> 0 ? L : R .
+     * LL type：即插入节点在当前节点左边的左边，action：当前节点右旋
+     * RR type：即插入节点在当前节点右边的右边，action：当前节点左旋
+     * LR type：即插入节点在当前节点左边的右边，action：左子树右旋后当前节点左旋
+     * RL type：即插入节点在当前节点右边的左边，action：右子树左旋后当前节点右旋
+     * @param node
+     * @return
+     */
+    private int balanceFactor(Node node){
+        if(node == null){
+            return 0;
+        }
+        return TreeUtil.getHeight(node.left) - TreeUtil.getHeight(node.right);
+    }
+
+    /**
+     * 左旋
+     * @param root
+     * @return
+     */
+    private Node leftRotate(Node root){
+        Node nextRoot = root.right;
+        Node temp = nextRoot.left;
+        nextRoot.left = root;
+        root.right = temp;
+        return nextRoot;
+    }
+
+    /**
+     * 右旋
+     * @param root
+     * @return
+     */
+    private Node rightRotate(Node root){
+        Node nextRoot = root.left;
+        Node temp = nextRoot.right;
+        nextRoot.right = root;
+        root.left = temp;
+        return nextRoot;
+    }
+
+    /**
+     * 校验是否平衡，根据类型旋转
+     * LL type：即插入节点在当前节点左边的左边，action：当前节点右旋
+     * RR type：即插入节点在当前节点右边的右边，action：当前节点左旋
+     * LR type：即插入节点在当前节点左边的右边，action：左子树右旋后当前节点左旋
+     * RL type：即插入节点在当前节点右边的左边，action：右子树左旋后当前节点右旋
+     * @param node
+     * @return
+     */
+    private Node rotate(Node node){
+        if(balanceFactor(node) > 1 && balanceFactor(node.left) >= 0){
+            return rightRotate(node);
+        }
+        if(balanceFactor(node) < -1 && balanceFactor(node.right) <= 0){
+            return leftRotate(node);
+        }
+        if(balanceFactor(node) > 1 && balanceFactor(node.left) < 0){
+            node.left = leftRotate(node.left);
+            return rightRotate(node);
+        }
+        if(balanceFactor(node) < -1 && balanceFactor(node.right) > 0){
+            node.right = rightRotate(node.right);
+            return leftRotate(node);
+        }
+        return node;
+    }
+
+    /**
+     * 对外添加的添加函数
+     * 返回本身是为了链式函数，方便。
+     * @param e
+     * @return
+     */
+    public AVLTree add(E e){
+        root = add(root,e);
+        return this;
+    }
+
+    /**
+     * 添加元素
+     * @param node
+     * @param e
+     * @return
+     */
+    private Node add(Node node,E e){
+        if(node == null){
+            size++;
+            return new Node(e);
+        }
+        if(node.value.compareTo(e) > 0){
+            node.left = add(node.left,e);
+        }else{
+            node.right = add(node.right,e);
+        }
+        return rotate(node);
+    }
+
+    /**
+     * 对外开放的移除函数
+     * @param e
+     */
+    public void remove(E e){
+        root = remove(e,root);
+    }
+
+    /**
+     * 移除元素，和添加元素不存在可逆操作（即添加 a 元素前的结构 和 移除 a 元素后的结构也许不同）
+     * @param e
+     * @param node
+     * @return
+     */
+    private Node remove(E e, Node node){
+        if(node == null){
+            return null;
+        }
+        Node temp = null;
+        if(node.value.compareTo(e) > 0){
+            node.left = remove(e,node.left);
+            temp =  node;
+        }else if(node.value.compareTo(e) < 0){
+            node.right = remove(e,node.right);
+            temp = node;
+        }else{
+            Node left = node.left;
+            Node right = node.right;
+            if(right == null){
+                size--;
+                return left;
+            }
+            Node min = getMin(right);
+            min.left = left;
+            size--;
+            temp = right;
+        }
+        return rotate(temp);
+    }
+
+    /**
+     * 获取整棵树的最小值，用于对外展示
+     * @return
+     */
+    public E getMin(){
+        if(this.isEmpty()){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        return (E) getMin(root).value;
+    }
+
+    /**
+     * 获取当前节点为根节点的树的最小值最小元素节点，用于移除
+     * @param node
+     * @return
+     */
+    private Node getMin(Node node){
+        if(node.left == null){
+            return node;
+        }
+        return getMin(node.left);
+    }
+
+    /**
+     * 打印校验是否有序
+     */
+    public void printf(){
+        TreeUtil.inOrderIterate(this.root);
+    }
+
+    /**
+     * 打印校验是否维持了平衡
+     */
+    public void printfLevel(){
+        TreeUtil.levelOrder(this.root);
+    }
+}
+```

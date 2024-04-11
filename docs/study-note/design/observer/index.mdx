@@ -1,0 +1,158 @@
+---
+sidebar_position: 1
+title: 观察者模式
+sidebar_label: 观察者模式
+---
+
+## 一、基本概念
+
+观察者模式是一种行为型设计模式，它定义了一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都会收到通知并自动更新。在实际应用中，可以将观察者模式想象成报社和订阅者之间的关系，报社为被观察者，订阅者为观察者。
+
+## 二、结构
+
+观察者模式的结构包括四个角色：抽象主题角色（Subject）、具体主题角色（ConcreteSubject）、抽象观察者角色（Observer）和具体观察者角色（ConcreteObserver）。
+
+- **抽象主题角色(Subject)**：定义了被观察者必须实现的方法，包括注册观察者、移除观察者和通知观察者。
+- **具体主题角色(ConcreteSubject)**：实现了抽象主题角色定义的方法，负责维护具体观察者列表并在状态改变时通知观察者。
+- **抽象观察者角色(Observer)**：定义了观察者必须实现的更新方法，用于接收被观察者状态的改变。
+- **具体观察者角色(ConcreteObserver)**：实现了抽象观察者角色定义的更新方法，根据被观察者状态的改变来更新自身状态。
+
+## 三、案例
+
+使用自定义实现的观察者模式来实现一个气象站管理系统，使用不同的观察者来展示天气信息。
+
+#### 实现
+
+```java
+/** 观察者接口 */
+public interface Observer {
+    void update(double temperature, double humidity, double pressure);
+}
+
+/** 被观察者接口 */
+public interface Subject {
+    void registerObserver(Observer observer); // 注册观察者
+    void removeObserver(Observer observer);   // 移除观察者
+    void notifyObservers();                   // 通知观察者
+}
+
+/** 气象数据类，实现被观察者接口 */
+public class WeatherData implements Subject {
+    private double temperature;
+    private double humidity;
+    private double pressure;
+    private List<Observer> observers;
+
+    public WeatherData() {
+        observers = new ArrayList<>();
+    }
+
+    public void setData(double temperature, double humidity, double pressure) {
+        this.temperature = temperature;
+        this.humidity = humidity;
+        this.pressure = pressure;
+        notifyObservers();
+    }
+
+    @Override
+    public void registerObserver(Observer observer) {
+        if (!observers.contains(observer)) {
+            observers.add(observer);
+        } else {
+            System.out.println("Observer already registered.");
+        }
+    }
+
+    @Override
+    public void removeObserver(Observer observer) {
+        if (observers.contains(observer)) {
+            observers.remove(observer);
+        } else {
+            System.out.println("Observer not registered.");
+        }
+    }
+
+    @Override
+    public void notifyObservers() {
+        for (Observer observer : observers) {
+            observer.update(temperature, humidity, pressure);
+        }
+    }
+}
+
+/** 实时天气显示，实现观察者接口 */
+public class CurrentConditionDisplay implements Observer {
+    private double temperature;
+    private double humidity;
+    private double pressure;
+
+    @Override
+    public void update(double temperature, double humidity, double pressure) {
+        this.temperature = temperature;
+        this.humidity = humidity;
+        this.pressure = pressure;
+        display();
+    }
+
+    public void display() {
+        System.out.println("CurrentConditionDisplay: [Temperature: " + temperature +
+                ", Humidity: " + humidity +
+                ", Pressure: " + pressure + "]");
+    }
+}
+
+/** 明天天气显示，实现观察者接口 */
+public class ForecastDisplay implements Observer {
+    private double temperature;
+    private double humidity;
+    private double pressure;
+
+    @Override
+    public void update(double temperature, double humidity, double pressure) {
+        this.temperature = temperature;
+        this.humidity = humidity;
+        this.pressure = pressure;
+        display();
+    }
+
+    public void display() {
+        System.out.println("ForecastDisplay: [Temperature: " + temperature +
+                ", Humidity: " + humidity +
+                ", Pressure: " + pressure + "]");
+    }
+}
+
+/** 测试类 */
+public class Test {
+    public static void main(String[] args) {
+        WeatherData weatherData = new WeatherData();
+        CurrentConditionDisplay currentDisplay = new CurrentConditionDisplay();
+        ForecastDisplay forecastDisplay = new ForecastDisplay();
+
+        weatherData.registerObserver(currentDisplay);
+        weatherData.registerObserver(forecastDisplay);
+
+        // 模拟更新天气数据
+        weatherData.setData(25.5, 70, 1013);
+
+        // 移除一个观察者
+        weatherData.removeObserver(currentDisplay);
+
+        // 再次更新天气数据
+        weatherData.setData(28, 65, 1010);
+    }
+}
+
+```
+
+## 四、总结
+
+- **双向依赖关系**：当一个抽象模型有两个方面，其中一个方面依赖于另一个方面时，可以使用观察者模式。这样可以将这些方面封装在独立的对象中，使它们可以各自独立地改变和复用。
+
+- **降低耦合度**：当一个对象的改变将导致其他一个或多个对象也发生改变，但对象不知道具体有多少其他对象会发生改变时，观察者模式可以降低对象之间的耦合度，使系统更加灵活。
+
+- **通知机制**：当一个对象必须通知其他对象，但不知道这些对象是谁时，可以使用观察者模式。被观察者对象只需要知道观察者接口，而不需要知道具体的观察者。
+
+- **链式触发机制**：当需要在系统中创建一个触发链，即一个对象的行为将影响到另一个对象，后者的行为将影响到下一个对象，依次类推时，观察者模式可以创建一种链式触发机制。
+
+观察者模式通过上述场景的应用，能够降低系统中对象之间的耦合度，提高系统的灵活性和可维护性，同时提供了一种有效的触发机制，使得对象之间的相互作用更加清晰和可控。

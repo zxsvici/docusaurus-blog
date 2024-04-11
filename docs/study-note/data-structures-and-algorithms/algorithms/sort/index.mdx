@@ -1,0 +1,928 @@
+---
+sidebarposition: 1
+title: 排序
+sidebarlabel: 排序
+---
+
+## 磨刀不误砍柴工
+获取随机数组
+```java
+    /**
+     * 准备随机数组，用于比较排序效率
+     * @return
+     */
+    private static int[] getArray(){
+        int[] result = new int[50000];
+        for (int i = 0; i < 50000; i++) {
+            result[i] =(int) Math.round(Math.random() * 50000);
+        }
+        return result;
+    }
+```
+交换函数
+```java
+   /**
+     * 交换
+     * @param x 下标1
+     * @param y 下标2
+     * @param arr 数组
+     */
+    private static void swap(int x, int y, int[] arr){
+        arr[x] = arr[x] ^ arr[y];
+        arr[y] = arr[x] ^ arr[y];
+        arr[x] = arr[x] ^ arr[y];
+    }
+```
+输出检查是否有序
+```java
+    /**
+     * 输出检查是否完成排序
+     * @param arr 数组
+     */
+    private static void printf(int[] arr){
+        for (int anArr : arr) {
+            System.out.print(anArr + "  ");
+        }
+        System.out.println();
+    }
+```
+## 选择排序
+### 思想
+- 在数组中选出极端元素，放在数组最前面做为已排序数组
+- 在从未排序数组中继续重复第一步
+### 特点
+- 空间复杂度： O(1)
+- 时间复杂度： O(n<sup>2</sup>)
+- 平均：O(n<sup>2</sup>)
+- 最快：O(n<sup>2</sup>)
+- 最慢：O(n<sup>2</sup>)
+- 稳定性：不稳定（即排序后会影响原来相等元素的相对位置）
+```java
+   /**
+     * 选择排序 每次交换
+     * @param arr 数组
+     */
+    private static void selectSort1(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < arr.length; i++) {
+            for (int j = i + 1; j < arr.length; j++) {
+                if(arr[j] < arr[i]){
+                    swap(i,j,arr);
+                }
+            }
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("selectSort1 ==>> " + (end - start));
+    }
+```
+
+优化点：不必每次都去交换，可以只记录极端元素的下标，一次比较完成后在交换。
+```java
+    /**
+     * 选择排序 记录下标，最后交换
+     * @param arr 数组
+     */
+    private static void selectSort2(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < arr.length; i++) {
+            int minIndex = i;
+            for (int j = i+1; j < arr.length; j++) {
+                minIndex = arr[minIndex] > arr[j] ? j : minIndex;
+            }
+            swap(minIndex,i,arr);
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("selectSort2 ==>> " + (end - start));
+    }
+```
+
+## 冒泡排序
+### 思想
+- 顾名思义，就是咕隆咕隆冒泡泡
+- 进行最多 n-1 轮排序，每一轮的最大者都会位于数组最后
+- 第 i 轮就是从 0 - i，由 0 开始和相邻的元素进行 1 v 1，结束后进行位次交换，继续开始下一场上路 1 v 1 男人大战
+### 特点
+- 空间复杂度： O(1)
+- 时间复杂度： O(n<sup>2</sup>)
+- 平均：O(n<sup>2</sup>)
+- 最快：O(n)
+- 最慢：O(n<sup>2</sup>)
+- 稳定性：稳定
+
+判断整体是否已经有序
+```java
+    /**
+     * 冒泡排序 判断在一次冒泡后是否已经有序
+     * @param arr 数组
+     */
+    private static void bubbleSort1(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = arr.length - 1; i > 0; i--) {
+            boolean flag = true;
+            for (int j = 0; j < i; j++) {
+                if(arr[j] > arr[j+1]){
+                    swap(j+1,j,arr);
+                    flag = false;
+                }
+            }
+            if(flag) break;
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("bubbleSort1 ==>> " + (end - start));
+    }
+```
+记录上次排序最后 pk 的位置
+```java
+    /**
+     * 冒泡排序 记录上一次冒泡的位置
+     * @param arr
+     */
+    private static void bubbleSort2(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = arr.length - 1; i > 0; i--) {
+            int last = 0;
+            for (int j = 0; j < i; j++) {
+                if(arr[j+1] < arr[j]){
+                    swap(j+1,j,arr);
+                    last = i + 1;
+                }
+            }
+            i = last;
+        }
+//        printf(arr);
+        long end = System.currentTimeMillis();
+        System.out.println("bubbleSort2 ==>> " + (end - start));
+    }
+```
+优化点：可双向冒泡，小的往前，大的往后
+```java
+    /**
+     * 冒泡排序 双向
+     * @param arr
+     */
+    private static void bubbleSort3(int[] arr){
+        long start = System.currentTimeMillis();
+        int left = 0, right = arr.length-1;
+        while(left < right){
+            for (int i = left; i < right; i++) {
+                if(arr[i] > arr[i+1]){
+                    swap(i,i+1,arr);
+                }
+            }
+            right--;
+            for (int i = right; i > left; i--) {
+                if(arr[i-1] > arr[i]){
+                    swap(i-1,i,arr);
+                }
+            }
+            left++;
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("bubbleSort3 ==>> " + (end - start));
+    }
+}
+```
+## 插入排序
+### 思想
+- 将数组首位视为已经排好序的数组
+- 每次取出已排序数组后的一个元素，插入到已排序的数组中，插入的位置要使数组仍然有序。
+- 重复上一步
+### 使用情景
+- 数据量少
+- 数据本身比较有序
+### 特点
+- 空间复杂度： O(1)
+- 时间复杂度： O(n<sup>2</sup>)
+- 平均：O(n<sup>2</sup>)
+- 最快：O(n)
+- 最慢：O(n<sup>2</sup>)
+- 稳定性：稳定
+```java
+    /**
+     * 插入排序 迁移
+     * @param arr
+     */
+    private static void insertSort1(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = 1; i < arr.length; i++) {
+//            当前插入的目标值
+            int target = arr[i];
+            int j;
+            for (j = i-1; j >= 0 && target < arr[j]; j--) {
+                arr[j+1] = arr[j];
+            }
+            arr[j+1] = target;
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("insertSort1 ==>> " + (end - start));
+    }
+
+    /**
+     * 插入排序 交换
+     * @param arr
+     */
+    private static void insertSort2(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = 1; i < arr.length; i++) {
+//            因为要交换，所以第二层循环的 j 要大于 0 防止下标越界
+            for (int j = i; j > 0 && arr[j] < arr[j-1]; j--) {
+                swap(j-1,j,arr);
+            }
+        }
+//        printf(arr);
+        long end = System.currentTimeMillis();
+        System.out.println("insertSort2 ==>> " + (end - start));
+    }
+```
+优化点：插入的关键在于寻找插入的位置，因为插入的是一个有序数组，所以这里我们可以用二分查找来提高排序的效率。
+```java
+    /**
+     * 插入排序 二分查找插入位置
+     * @param arr
+     */
+    private static void insertSort3(int[] arr){
+        long start = System.currentTimeMillis();
+        for (int i = 1; i < arr.length; i++) {
+            int target = arr[i];
+            int left = 0, right = i - 1;
+//            二分查找插入位置
+            while(left <= right){
+                int mid = left + (right - left)/2;
+                if(arr[mid] > target){
+                    right = mid -1;
+                }else {
+                    left = mid + 1;
+                }
+            }
+            for (int j = i - 1; j >= left ; j--) {
+                arr[j+1] = arr[j];
+            }
+            arr[left] = target;
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("insertSort3 ==>> " + (end - start));
+    }
+```
+
+
+## 希尔排序
+### 思想
+- 实质上也是插入排序
+- 将原数组分成几个待排序数组，每个待排序数组都进行插入排序
+- 重复上一步
+![shell1.png](http://zxsvici.fun/img/sort/shell1.png)
+### 特点
+- 空间复杂度： O(1)
+- 时间复杂度： O(n log n) - O(n<sup>2</sup>) 取决于取的增量序列（分组方式）
+- 平均：O(n log n) - O(n<sup>2</sup>)
+- 最快：O(n<sup>1.3</sup>) (ps:这个结果我不知道是怎么得到的，但据说是通过非常复杂的计算得出的一个确定值）
+- 最慢：O(n2) （ps:这个我会，这个我能做到）
+- 稳定性：不稳定
+- 与普通插排的对比：首先希尔排序是高效的插入排序，再者希尔排序是不稳定的排序，和插排效率同样取决于数据特征，但希尔排序还取决于如何去取增量序列。
+```java
+    /**
+     * 希尔排序 步长为 n/2
+     * @param arr
+     */
+    private static void shellSort1(int[] arr){
+        long start = System.currentTimeMillis();
+//        分组
+        for (int gap = arr.length; gap > 0; gap /= 2) {
+//            插排
+            for (int i = gap; i < arr.length; i++) {
+                int target = arr[i];
+                int j;
+                for (j = i - gap; j >= 0 && target < arr[j]; j -= gap) {
+                    arr[j+gap] = arr[j];
+                }
+                arr[j+gap] = target;
+            }
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("shellSort1  ==>> " + (end - start));
+    }
+
+    /**
+     * 希尔排序 步长为 3*n + 1
+     * @param arr
+     */
+    private static void shellSort2(int[] arr){
+        long start = System.currentTimeMillis();
+//        增量序列（合理分组）
+        int gap = 0;
+        while(gap <= arr.length){
+            gap = gap*3 + 1;
+        }
+        for (; gap > 0; gap = (gap - 1)/3) {
+            for (int i = gap; i < arr.length; i++) {
+                int target = arr[i];
+                int j;
+                for (j = i - gap; j >= 0 && target < arr[j]; j -= gap) {
+                    arr[j+gap] = arr[j];
+                }
+                arr[j+gap] = target;
+            }
+        }
+        long end = System.currentTimeMillis();
+//        printf(arr);
+        System.out.println("shellSort2  ==>> " + (end - start));
+    }
+```
+
+## 快速排序
+
+### 思想
+
+- 一个数组如果是有序的, 那么它的任何一个元素都会满足元素左边全部比该元素小/大、右边全部比该元素大/小. 反过来, 当数组中每个元素都满足这一点, 那么这个数组就是有序的！
+- 快速排序就是这个思路, 这里做一个升序排序.
+- 选举出一个元素, 将比它小的排在左边, 比它大的排右边.
+- 分区结束后, 我们得到左小数组（全部比选举元素小）、选举元素、右大数组（全部比选举元素大）. 我们可以对左小数组、右大数组进行上一步操作.
+- 重复上述步骤（即左右不断递归划分）. 从而最终完成排序.
+### 特点
+- 空间复杂度： O(log n) - O(n)
+- 时间复杂度： O(n log n) - O(n<sup>2</sup>)
+- 平均：O(n log n)
+- 最快：O(n log n)
+- 最慢：O(n<sup>2</sup>)
+- 稳定性：不稳定
+
+代码示例：
+```java
+    /**
+     * 快速排序 基本版
+     * @param arr
+     */
+    private static void quickSort(int[] arr){
+        long start = System.currentTimeMillis();
+        if(arr == null || arr.length <= 1){
+            return;
+        }
+        quickProcess(0,arr.length-1,arr);
+        long end = System.currentTimeMillis();
+ //       printf(arr);
+        System.out.println("quickSort   ==>> " + (end - start));
+    }
+
+    /**
+     * 快排递归过程
+     * @param left
+     * @param right
+     * @param arr
+     */
+    private static void quickProcess(int left, int right, int[] arr){
+        if(left >= right){
+            return;
+        }
+//        获取选举元素分区后的下标
+        int partition = quickPartition(left,right,arr);
+        quickProcess(left,partition - 1,arr);
+        quickProcess(partition + 1,right,arr);
+    }
+
+    /**
+     * 快排分区过程
+     * @param left
+     * @param right
+     * @param arr
+     * @return
+     */
+    private static int quickPartition(int left, int right, int[] arr) {
+        int target = arr[left];
+        int index = left;
+        for (int i = left; i <= right; i++) {
+            if(arr[i] < target){
+                swap(i,++index,arr);
+            }
+        }
+        swap(left,index,arr);
+        return index;
+    }
+```
+因为分区过程中的交换可能会传入 x == y 的情况, 所以前两篇文章的交换函数并不适用, 需修改成以下形式：
+```java
+   /**
+     * 交换
+     * @param x 下标1
+     * @param y 下标2
+     * @param arr 数组
+     */
+    private static void swap(int x, int y, int[] arr){
+        int t = arr[x];
+        arr[x] = arr[y];
+        arr[y] = t;
+    }
+//  或者给原来的加个判断条件
+    private static void swap(int x, int y, int[] arr){
+        if(x == y) return;
+        arr[x] = arr[x] ^ arr[y];
+        arr[y] = arr[x] ^ arr[y];
+        arr[x] = arr[x] ^ arr[y];
+    }
+```
+通过基本的快速排序代码, 我们可以发现, 快速排序的效率是非常依赖所取的选举元素的, 当取的元素很大/小, 都会导致分区后左右不平衡, 当取到极端元素（极大或极小）时, 快速排序的效率会降至最低 O(n<sup>2</sup>).
+
+![最坏情况](http://zxsvici.fun/img/sort/quick1.png)
+
+所以我们需要降低这个选举元素是极端元素的概率（减少数据特征给快排带来的影响）, 即随机选取一个元素作为分割元素.
+
+优化（随机选取分区选举元素）：
+```java
+    /**
+     * 快排递归过程
+     * @param left
+     * @param right
+     * @param arr
+     */
+    private static void quickProcess(int left, int right, int[] arr){
+        if(left >= right){
+            return;
+        }
+//        随机选取元素
+        swap(left,left + (int) (Math.random() * (right - left + 1)),arr);
+//        获取选举元素分区后的下标
+        int partition = quickPartition(left,right,arr);
+        quickProcess(left,partition - 1,arr);
+        quickProcess(partition + 1,right,arr);
+    }
+```
+
+细心的朋友可能已经发现了, 我在上面分区过程中是按 小于, 大于等于 来分区的, 这样的排序在数组重复数很多的情况下也会造成分区不平衡的现象（选举元素集中在右边）, 影响排序性能. 所以我们要去做一个按照 小于等于,大于等于分区的改造.
+
+![分区现象](http://zxsvici.fun/img/sort/quick2.png)
+
+
+### 分区思路
+
+
+- 从两侧分别同时筛选小于,大于的元素, 不符合条件的就交换.
+- low--, high++重复上一步
+- 最终得到是平衡的结果, 两边都有几率拥有选举元素.
+
+![分区](http://zxsvici.fun/img/sort/quick3.png)
+
+优化（双路分区）：
+```java
+    /**
+     * 双路分区 得到相对平衡的分区
+     * @param left
+     * @param right
+     * @param arr
+     * @return
+     */
+    private static int quickPartitionDouble(int left, int right, int[] arr){
+        int target = arr[left];
+        int low = left + 1;
+        int high = right;
+        while(true){
+            while(low < right && arr[low] < target){
+                low++;
+            }
+            while(high > left && arr[high] > target){
+                high--;
+            }
+            if(low >= high){
+                break;
+            }
+            swap(low++,high--,arr);
+        }
+        swap(left,high,arr);
+        return high;
+    }
+```
+接下来, 我们自然而然的就该想到分区可以 小于, 等于 , 大于 这样分.
+
+### 思路
+
+
+- 从两侧筛选, 小于 放在左边, 大于 放在右边, 等于 放在中间
+-- 注意指针、左右区域容量的变化
+- 重复上一步
+
+
+![三路分区](http://zxsvici.fun/img/sort/quick4.png)
+代码示例：
+```java
+    /**
+     * 快速排序递归
+     * @param left
+     * @param right
+     * @param arr
+     */
+    private static void quickProcessThree(int left, int right, int[] arr){
+        if(left >= right){
+            return;
+        }
+//        随机选取元素
+        swap(left,left + (int) (Math.random() * (right - left + 1)),arr);
+//        获取中间分区的首尾下标
+        int[] partition = quickPartititonThree(left, right, arr);
+        quickProcessThree(left,partition[0],arr);
+        quickProcessThree(partition[1],right,arr);
+    }
+
+    /**
+     * 三路分区
+     * @param left
+     * @param right
+     * @param arr
+     * @return
+     */
+    private static int[] quickPartititonThree(int left, int right, int[] arr){
+        int low = left - 1;
+        int high = right + 1;
+        int index = left;
+        int target = arr[left];
+        while(index < high){
+            if(arr[index] < target){
+//                指针后移, 左区+1
+                swap(index++,++low,arr);
+            }else if(arr[index] > target){
+//                右区+1
+                swap(index,--high,arr);
+            }else {
+//                指针后移
+                index++;
+            }
+        }
+        return new int[] {low,high};
+    }
+```
+
+## 思想
+- <font style={{color: 'red'}}>一个长度大于 1 的有序数组一定可以拆分成两个长度大于等于 1 的有序数组。我们将一个数组不断进行递归划分，划分至不可再分，即成为 n 个有序数组，然后再不断合并，最终得到有序数组。</font>
+- 对数组进行划分（子数组长度 == 1 时就不需要继续划分了）
+- 准备一个记录数组用来临时存储合并的数组
+- 合并操作
+- - 给定两个指针，分别指向两个待合并数组首位
+- - 比较指针元素，小的放入记录数组，指针后移
+- - 重复上一步操作完成合并
+- 重复合并操作完成排序
+![归并递归](http://zxsvici.fun/img/sort/merge_1.png)
+### 特点
+- 空间复杂度： O(n)
+- 时间复杂度： O(n log n)
+- 平均：O(n log n)
+- 最快：O(n log n)
+- 最慢：O(n log n)
+- 稳定性：稳定
+### 应用场景
+<font style={{color: 'red'}}>
+- 数据量大，且对稳定性有要求
+- 数据存在部分有序的特征
+- 外部排序
+</font>
+
+实例代码：
+```java
+    /**
+     * 归并排序   递归
+     * @param arr
+     */
+    private static void mergeSort1(int[] arr){
+        long start = System.currentTimeMillis();
+        if(arr == null || arr.length <= 1){
+            return;
+        }
+        mergeProcess(0,arr.length-1,arr);
+        long end = System.currentTimeMillis();
+        printf(arr);
+        System.out.println("mergeSort1  ==>> " + (end-start));
+    }
+
+    /**
+     * 递归划分
+     * @param left
+     * @param right
+     * @param arr
+     */
+    private static void mergeProcess(int left, int right, int[] arr){
+        if(left >= right){
+            return;
+        }
+        int mid = (left + right)/2;
+        mergeProcess(left,mid,arr);
+        mergeProcess(mid+1,right,arr);
+        if(arr[mid] > arr[mid + 1]){
+            merge(left,mid,right,arr);
+        }
+    }
+
+    /**
+     * 合并操作
+     * @param left
+     * @param mid
+     * @param right
+     * @param arr
+     */
+    private static void merge(int left, int mid, int right, int[] arr){
+        int[] record = new int[right - left + 1];
+        int index = 0;
+        int x = left;
+        int y = mid + 1;
+        while(x <= mid && y <= right){
+            record[index++] = arr[x] <= arr[y] ? arr[x++] : arr[y++];
+        }
+        while(x < mid + 1){
+            record[index++] = arr[x++];
+        }
+        while(y <= right){
+            record[index++] = arr[y++];
+        }
+        while (index > 0){
+            arr[right--] = record[--index];
+        }
+    }
+```
+上面用的是递归的归并排序，但是如果存在海量的数据，递归的深度就会把栈压爆，造成内存溢出，所以能递归的我们最好都去优化成迭代。
+
+### 迭代思路
+- 归并排序拆开无非就是两个操作，划分、合并。递归和迭代在合并上是一致的，区别在于划分，递归时我们全权交给递归调用，而迭代我们就需要一个变量去完成合并操作。
+- 递归时拆分到底最小长度是 1 ，这里我们直接以长度 1 的数组合并，完成第一次合并。
+- 增大长度，重复上一步。
+
+![迭代](http://zxsvici.fun/img/sort/merge_2.png)
+
+代码示例：
+```java
+    /**
+     * 迭代       手动合并分区
+     * @param arr
+     */
+    private static void mergeSort2(int[] arr){
+        long start = System.currentTimeMillis();
+        int gap = 1;
+        int len = arr.length;
+        while(gap < len){
+            int i = 0;
+            while(i < len){
+                int cut = i + gap * 2 - 1;
+//                防止下标越界
+                merge(i,Math.min((i + cut)/2,len-1),Math.min(cut,len - 1),arr);
+                i += gap * 2;
+            }
+            gap *= 2;
+        }
+        long end = System.currentTimeMillis();
+        printf(arr);
+        System.out.println("mergeSort2   ==>> " + (end - start));
+    }
+```
+尽量写迭代方式的归并排序，面试不会让你写递归的！！！
+
+
+## 外排序
+### 思路
+- 问题抛出，内存 2g 如何处理 16g 数据量的排序
+- 问题处理
+- - 按可用内存（2g），将数据文件（这个数据量肯定是文件了）分成若干个小的文件（内存可处理的），将这些小文件依次放入内存排序，存入存储器，
+- - 排序完成后，对每个已排序的文件进行多路归并排序，得到整个大的有序数据文件。
+- 多路归并排序
+- - 通俗的说就是，两个有序的数组，我比较极端值来确定范围。
+- - 确定最小值在哪个文件 和 各个小文件的最小值在其他小文件的位置。
+- - - 举例：min(file1) = 3 = file1[0], min(file1) = file2[2]
+- - - 文件1 的最小值是 3，它在文件2 的第3 行。
+- - 将当前最小值存入大文件
+- - 然后重复上述步骤
+- - 其中要用到胜者树、败者树，这些我想写数据结构的时候再提，现在就草草结束吧。
+
+
+## 堆排序
+### 思想
+- 顾名思义，堆排序是借用了堆的特性（每一个父节点的值都 大于/小于 子节点的值）
+- 做升序就用大顶堆，降序就用小顶堆。
+- - 利用数组建立大顶堆（up上浮）
+- - 将堆顶元素与堆尾元素互换，下沉
+- - - 取走根节点，缩小堆
+- - - 这时必须取一个节点来替代根节点，否则堆就不能继续维持了。代价最小的就是拿当前堆的叶子节点来替代。
+- - - 替代后，对堆进行调整（down下沉）使其继续保有堆的性质，时间复杂度 O(log n) 是最小的。
+- - 重复上一步
+![初始化](http://zxsvici.fun/img/sort/heap_1.png)
+### 特点
+- 空间复杂度： O(1)
+- 时间复杂度： O(n log n)
+- 平均：O(n log n)
+- 最快：O(n log n)
+- 最慢：O(n log n)
+- 稳定性：不稳定
+### 应用场景
+- 基本有序
+- 对空间复杂度、时间复杂度均有要求
+
+
+堆排序详细过程图解：
+![详细过程](http://zxsvici.fun/img/sort/heap_2.png)
+```java
+    /**
+     * 堆排序
+     * @param arr
+     */
+    private static void heapSort1(int[] arr){
+        long start = System.currentTimeMillis();
+        if(arr == null || arr.length <= 1){
+            return;
+        }
+        int index = 0;
+        while (index < arr.length){
+            up(index++,arr);
+        }
+        printf(arr);
+        int size = arr.length - 1;
+        swap(0,size,arr);
+        while(size > 0){
+            down(0,size--,arr);
+            swap(0,size,arr);
+        }
+        long end = System.currentTimeMillis();
+        printf(arr);
+        System.out.println("heapSort1    ==>> " + (end - start));
+    }
+
+    /**
+     * 上浮，将插入的数放入大顶堆
+     * @param index
+     * @param arr
+     */
+    private static void up(int index, int[] arr){
+        while (arr[index] > arr[(index - 1)/2]){
+            swap(index,(index - 1)/2,arr);
+            index = (index - 1)/2;
+        }
+    }
+
+    /**
+     * 下沉，根据当前堆的大小、数的大小调整堆
+     * @param index
+     * @param size
+     * @param arr
+     */
+    private static void down(int index, int size, int[] arr){
+        int largeIndex = index * 2 + 1;
+        while(largeIndex < size){
+            int maxIndex = largeIndex + 1 < size && arr[largeIndex + 1] > arr[largeIndex] ? largeIndex + 1 : largeIndex;
+            maxIndex = arr[maxIndex] > arr[index] ? maxIndex : index;
+            if(maxIndex == index){
+                break;
+            }
+            swap(maxIndex,index,arr);
+            index = maxIndex;
+            largeIndex = index * 2 + 1;
+        }
+        printf(arr);
+    }
+```
+
+# 非比较排序
+## 特点
+- 并非是不去比较，而是排序时思想的主体不在比较上
+- 时间复杂度可以达到 O(n)
+- 不稳定
+## 计数排序
+### 思想
+- 字面意思，计数统计。
+- 当我们知道一个数组的数值区间，我们可以建一个计数数组，统计排序数组的各个元素的个数。
+- 统计完成后，由于计数数组下标一定有序，则将计数数组清零赋值给原数组即可完成排序。
+![计数排序](http://zxsvici.fun/img/sort/count_1.png)
+### 特点
+- 时间复杂度 O(n)
+### 应用场景
+- 知道数据范围
+- 有统计需求
+```java
+    /**
+     * 计数排序
+     * @param arr
+     */
+    private static void countSort(int[] arr){
+        long start = System.currentTimeMillis();
+//        计数数组       50000是因为我取的50000随机，这个视情况而定
+        int[] count = new int[50000];
+        int index = 0;
+//        计数
+        while(index < arr.length){
+            count[arr[index++]]++;
+        }
+        index = 0;
+        int i = 0;
+//        排序
+        while(index < 50000){
+            while(count[index]-- > 0){
+                arr[i++] = index;
+            }
+            index++;
+        }
+        long end = System.currentTimeMillis();
+        printf(arr);
+        System.out.println("countSort   ==>> " + (end - start));
+    }
+```
+## 桶排序
+### 思想
+- 将数组根据最大最小值平均分配成几个连续的子数组
+- 子数组排序
+- 合并
+- 上面所说的计数排序就是一种特殊的桶排序，即分最多的桶。
+### 特点
+- 时间复杂度 O(n + log n - log k) 受分桶数量影响
+- 适用于小整数的排序
+- 不稳定
+![桶排](http://zxsvici.fun/img/sort/bucket_1.png)
+```java
+    /**
+     * 桶排序
+     * @param arr
+     */
+    private static void bucketSort(int[] arr){
+        long start = System.currentTimeMillis();
+//        桶的个数
+        int bucket = 1000;
+//        计数数组，记录桶的边界信息
+        int[] count = new int[bucket];
+//        分区数组
+        int[] temp = new int[arr.length];
+//        计算桶内元素数量
+        for (int i : arr) {
+            count[i/bucket]++;
+        }
+//        定位边界
+        for (int i = 1; i < bucket; i++) {
+            count[i] += count[i - 1];
+        }
+//        将原数组重新排列分桶，桶外有序，即 A.max < B.min
+        for (int i = arr.length - 1; i >= 0; i--) {
+            temp[--count[arr[i]/bucket]] = arr[i];
+        }
+//        赋值原数组
+        for (int i = 0; i < arr.length; i++) {
+            arr[i] = temp[i];
+        }
+//        桶内排序
+        for (int i = 0; i < bucket; i++) {
+            int left = count[i];
+            int right = i == 999 ? arr.length - 1 : count[i + 1] - 1;
+            if(left < right){
+                Arrays.sort(arr,left,right + 1);
+            }
+        }
+        long end = System.currentTimeMillis();
+        printf(arr);
+        System.out.println("bucketSort ==>> " + (end - start));
+    }
+```
+## 基数排序
+### 思想
+- 按照数的数位数字排序（这个排序需要稳定排序，高位排序需要用到低位排序）
+- 从最低位往上一直比较到最高位，不足位的补0
+### 特点
+- 时间复杂度 O(n)
+- 适用于大整数
+![基数排序](http://zxsvici.fun/img/sort/radix_1.png)
+```java
+    /**
+     * 基数排序
+     * @param arr
+     */
+    private static void radixSort(int[] arr){
+        long start = System.currentTimeMillis();
+        int max = Integer.MIN_VALUE;
+        for (int i = 0; i < arr.length; i++) {
+            max = Math.max(arr[i],max);
+        }
+        int i = 1;
+        while(i < max){
+            radixProcess(i,arr);
+            i *= 10;
+        }
+        long end = System.currentTimeMillis();
+        printf(arr);
+        System.out.println("radixSort  ==>> " + (end - start));
+    }
+
+    /**
+     * 排序过程     颗粒度为 1 的桶排
+     * @param i
+     * @param arr
+     */
+    private static void radixProcess(int i, int[] arr){
+        int[] count = new int[10];
+        int[] temp = new int[arr.length];
+        for (int j = 0; j < arr.length; j++) {
+            count[(arr[j] / i) % 10]++;
+        }
+        for (int j = 1; j < 10; j++) {
+            count[j] += count[j - 1];
+        }
+        for (int j = arr.length - 1; j >= 0; j--) {
+            temp[--count[(arr[j] / i) % 10]] = arr[j];
+        }
+        for (int j = 0; j < arr.length; j++) {
+            arr[j] = temp[j];
+        }
+    }
+```

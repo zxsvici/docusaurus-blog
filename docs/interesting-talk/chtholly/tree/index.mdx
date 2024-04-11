@@ -1,0 +1,158 @@
+---
+sidebar_position: 1
+title: 珂朵莉上树
+sidebar_label: 珂朵莉上树
+---
+
+原题为 [CF896C](https://www.luogu.com.cn/problem/CF896C)
+
+## 算法介绍
+珂朵莉树是一种用于处理区间操作的数据结构，它将数组分成包含连续相同值的若干段（基本段），并使用集合或链表维护。对区间进行操作时，珂朵莉树会暴力找出区间内的所有基本段，并对每个基本段进行操作。
+
+## 大佬的实现代码
+```
+#include <bits/stdc++.h>
+
+using namespace std;
+
+typedef long long ll;
+
+// 快速读取输入的函数
+inline ll read() {
+    ll ans = 0;
+    char c = getchar();
+    while (!isdigit(c))
+        c = getchar();
+    while (isdigit(c)) {
+        ans = ans * 10 + c - '0';
+        c = getchar();
+    }
+    return ans;
+}
+
+// 线段树的节点结构体
+struct node {
+    ll l, r;
+    mutable ll v;  // 可变的值，用于区间赋值操作
+    node(ll l, ll r, ll v) : l(l), r(r), v(v) {}
+    bool operator<(const node &o) const { return l < o.l; }
+};
+
+set<node> tree;
+
+// 分割线段树，返回分割位置的迭代器
+auto split(ll pos) {
+    auto it = tree.lower_bound(node(pos, 0, 0));  // lower_bound 返回大于等于指定元素的第一个位置
+    if (it != tree.end() && it->l == pos)  // 如果找到了已存在的节点，直接返回
+        return it;
+    it--;  // 否则向前移动一个位置
+    ll l = it->l, r = it->r, v = it->v;  // 获取前一个节点的信息
+    tree.erase(it);  // 删除前一个节点
+    tree.insert(node(l, pos - 1, v));  // 插入新节点，表示区间 [l, pos-1]
+    return tree.insert(node(pos, r, v)).first;  // 插入新节点，表示区间 [pos, r]
+}
+
+// 对区间 [l, r] 进行赋值操作
+void assign(ll l, ll r, ll v) {
+    auto end = split(r + 1), begin = split(l);  // 分割区间
+    tree.erase(begin, end);  // 删除区间内的节点
+    tree.insert(node(l, r, v));  // 插入新的节点，表示整个区间被赋值为 v
+}
+
+// 计算 a 的 n 次幂对 p 取模的结果
+ll qpow(ll a, ll n, ll p) {
+    ll ans = 1;
+    a %= p;
+    while (n) {
+        if (n & 1)
+            ans = ans * a % p;
+        n >>= 1;
+        a = a * a % p;
+    }
+    return ans;
+}
+
+ll n, m, seed, vmax;
+
+ll rnd() {
+    ll ret = seed;
+    seed = (seed * 7 + 13) % 1000000007;
+    return ret;
+}
+
+// 对区间 [l, r] 进行增加操作
+void add(ll l, ll r, ll v) {
+    auto end = split(r + 1);  // 分割右边界后一个位置
+    for (auto it = split(l); it != end; it++)  // 遍历区间内的节点
+        it->v += v;  // 对每个节点的值进行增加操作
+}
+
+// 在区间 [l, r] 中找到第 k 小的元素
+ll kth(ll l, ll r, ll k) {
+    auto end = split(r + 1);  // 分割右边界后一个位置
+    vector<pair<ll, ll>> v;  // 用于存储区间内的值和区间长度的 pair
+    for (auto it = split(l); it != end; it++)  // 遍历区间内的节点
+        v.push_back(make_pair(it->v, it->r - it->l + 1));  // 将值和区间长度存入 vector
+    sort(v.begin(), v.end());  // 对 vector 进行排序
+    for (int i = 0; i < v.size(); i++) {  // 遍历排序后的 vector
+        k -= v[i].second;  // 减去区间长度
+        if (k <= 0)  // 如果 k 小于等于 0，说明找到了第 k 小的元素
+            return v[i].first;  // 返回该元素的值
+    }
+}
+
+// 计算区间 [l, r] 内元素的 x 次幂之和对 y 取模的结果
+ll sum_of_pow(ll l, ll r, ll x, ll y) {
+    ll tot = 0;  // 总和初始化为 0
+    auto end = split(r + 1);  // 分割右边界后一个位置
+    for (auto it = split(l); it != end; it++)  // 遍历区间内的节点
+        tot = (tot + qpow(it->v, x, y) * (it->r - it->l + 1)) % y;  // 计算每个节点的 x 次幂之和并取模
+    return tot;  // 返回计算结果
+}
+
+int main() {
+    n = read(), m = read(), seed = read(), vmax = read();
+    for (int i = 1; i <= n; ++i) {
+        int r = rnd();  // 生成伪随机数
+        tree.insert(node(i, i, r % vmax + 1));
+    }
+    for (int i = 1; i <= m; ++i) {
+        ll opr = rnd() % 4 + 1, l = rnd() % n + 1, r = rnd() % n + 1, x, y;
+        if (l > r)
+            swap(l, r);
+        if (opr == 3)
+            x = rnd() % (r - l + 1) + 1;
+        else
+            x = rnd() % vmax + 1;
+        if (opr == 4)
+            y = rnd() % vmax + 1;
+        switch (opr) {
+            case 1:
+                add(l, r, x);
+                break;
+            case 2:
+                assign(l, r, x);
+                break;
+            case 3:
+                printf("%lld\n", kth(l, r, x));
+                break;
+            case 4:
+                printf("%lld\n", sum_of_pow(l, r, x, y));
+        }
+    }
+    return 0;
+}
+```
+
+## 复杂度 (d：分割段数)
+因为看到这个结构时注意到是线性复杂度，虽然我是个彩笔但还是想分析一下。
+### 单操作
+- add(l, r, v)：增加操作，将区间 [l, r] 内的所有元素增加 v。操作的时间复杂度为 O(d)
+- assign(l, r, v)：赋值操作，将区间 [l, r] 内的所有元素赋值为 v。操作的时间复杂度为 O(d)
+- kth(l, r, k)：查询第 k 小的元素。操作的时间复杂度为 O(d logd)
+- sum_of_pow(l, r, x, y)：计算区间 [l, r] 内元素的 x 次幂之和对 y 取模的结果。操作的时间复杂度为 O(d logd)
+
+### 总体
+对于总体复杂度真是一点分析不了！！
+[珂学家复杂度分析](https://zhuanlan.zhihu.com/p/102786071)
+虽然看不太懂，但是我大受震撼！！！

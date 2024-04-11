@@ -1,0 +1,79 @@
+---
+sidebar_position: 1
+title: 工厂方法模式
+sidebar_label: 工厂方法模式
+---
+
+## 基本概念
+工厂方法模式是一种类的创建型设计模式，也被称为虚拟构造子模式或多态性工厂模式。它的主要目的是定义一个创建产品对象的工厂接口，将实际的创建工作延迟到子类中去实现。
+
+工厂方法模式的核心概念是将对象的创建与使用分离，通过定义一个工厂接口来创建产品对象，具体的产品创建实现由子类来完成。这样可以避免客户端直接依赖具体产品类，而是依赖于抽象工厂接口，从而实现了解耦。
+
+## 结构
+工厂方法模式包含以下几个关键角色：
+
+- 抽象产品（Product）：定义了产品的通用接口，客户端通过这个接口与产品进行交互。
+- 具体产品（Concrete Product）：实现了抽象产品接口，是工厂方法模式创建的目标对象。
+- 抽象工厂（Factory）：定义了一个创建产品对象的工厂接口，包含一个创建产品的抽象方法。
+- 具体工厂（Concrete Factory）：实现了抽象工厂接口，负责具体产品的创建。
+![工厂方法模式](https://www.vicizxs.fun/img/design/factory_method_pattern.png)
+
+## 案例
+下面以制造不同国家的食物为例，说明工厂方法模式的应用。
+
+首先定义食物接口和具体食物类：
+```java
+public interface Food {
+    // 食物接口
+}
+
+public class AmericanFood implements Food {
+    // 具体的美国食物
+}
+
+public class ChineseFood implements Food {
+    // 具体的中国食物
+}
+```
+然后定义抽象工厂接口和具体工厂类：
+```java
+public interface FoodFactory {
+    Food createFood();
+}
+
+public class AmericanFoodFactory implements FoodFactory {
+    @Override
+    public Food createFood() {
+        return new AmericanFood();
+    }
+}
+
+public class ChineseFoodFactory implements FoodFactory {
+    @Override
+    public Food createFood() {
+        return new ChineseFood();
+    }
+}
+```
+最后，在客户端根据需要选择具体的工厂来创建相应的食物对象：
+```java
+public class Client {
+    public static void main(String[] args) {
+        FoodFactory americanFactory = new AmericanFoodFactory();
+        Food americanFood = americanFactory.createFood();
+
+        FoodFactory chineseFactory = new ChineseFoodFactory();
+        Food chineseFood = chineseFactory.createFood();
+    }
+}
+```
+
+## 总结
+| 特点                 | 工厂方法模式                                     | 简单工厂模式                                     |
+|---------------------|--------------------------------------------------|--------------------------------------------------|
+| 定义                | 定义了一个创建产品对象的工厂接口，并由子类来实现 | 将所有产品的创建逻辑集中在一个工厂类中          |
+| 类数量               | 随着产品类型的增加，需要增加对应的工厂类         | 所有产品的创建逻辑都在一个工厂类中，类数量相对较少 |
+| 灵活性               | 更灵活，每个产品都有对应的工厂类                | 有新增产品时，需要修改工厂类，违反了开闭原则      |
+| 耦合度               | 低，客户端只需要知道工厂接口即可               | 相对较高，客户端需要知道工厂类和产品类           |
+| 扩展性               | 容易扩展，新增产品只需新增对应的工厂类         | 扩展性较差，新增产品需要修改工厂类               |
+| 适用场景             | 需要创建一系列相关对象，对象之间存在共同接口   | 简单的对象创建场景，不涉及复杂的对象关系         |

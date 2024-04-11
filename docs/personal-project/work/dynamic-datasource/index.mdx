@@ -1,0 +1,38 @@
+---
+sidebar_position: 0
+title: 动态数据源连接数据库内存泄漏的问题
+sidebar_label: 动态数据源连接数据库内存泄漏的问题
+---
+
+## 起因
+自己测试数据中心时，发现部分数据库(pg、hive)连接一直未回收导致应用在运行一段时间后对应的服务就不可用了。
+## 思路
+由于使用的Druid连接池，内部提供了比较完善的机制，通过过滤器机制，确定自动断开是在何时失效的，然后手动断开即可
+## 排查
+### statementExecuteQueryAfter
+这个方法是在语句执行查询操作之后被调用的。在语句执行查询操作完成后，Druid 数据源会调用这个方法，用于处理查询操作之后的相关逻辑。
+
+
+在这个钩子中我成功获取了连接，并执行了connection.close()。测试运行，由于是查询完就关闭了，线程未推出而连接断开所以爆出了数据库已关闭的异常，且监控显示活跃连接数始终只有1。问题很大...
+### dataSource_releaseConnection
+这个方法是在连接释放时被调用的。在连接使用完毕后，连接池会将连接释放回连接池中，并在这个过程中调用 dataSource_releaseConnection 方法，用于处理连接释放后的相关逻辑。
+
+在这个方法中我们仍然是不能运行close方法，同样会出现异常和连接不可重新创建的情况，不断的查资料，终于是找到了druid正确的关闭连接方式
+```java
+            DruidConnectionHolder connectionHolder = druidDataSource.getConnection().getConnectionHolder();
+            DruidAbstractDataSource dataSource = connectionHolder.getDataSource();
+            dataSource.discardConnection(connectionHolder);
+```
+
+### discardConnection
+优点：
+- 即时释放连接：在某些情况下，你可能需要立即释放连接，而不是等待连接超时或者归还到连接池。例如，在一个高并发的系统中，某些连接可能会长时间被占用，导致其他请求无法获取到连接。通过手动调用 discardConnection 方法，你可以立即释放连接，让其他请求能够及时获得连接，提高系统的并发性能和吞吐量。
+
+- 控制连接生命周期：有时候你可能希望手动控制连接的生命周期，而不是依赖于连接池的默认行为。通过手动调用 discardConnection 方法，你可以在适当的时候释放连接，避免连接被长时间占用或者滥用。
+
+- 避免连接泄漏：在一些情况下，由于程序逻辑错误或者异常情况，连接可能会被泄漏而无法正确地释放。通过手动调用 discardConnection 方法，你可以确保及时释放连接，避免连接泄漏导致的系统性能问题或者资源浪费。
+
+缺点：滥用 discardConnection 方法可能会导致连接的不稳定性和资源浪费，所以应该谨慎使用
+
+## 待续
+至此，hive和pg的连接问题解决了，但是诱发的原因仍未找到。

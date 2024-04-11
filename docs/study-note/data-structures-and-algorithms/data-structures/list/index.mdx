@@ -1,0 +1,445 @@
+---
+sidebar_position: 1
+title: 集合(一)
+sidebar_label: 集合(一)
+---
+
+## 动态数组
+- resize()   动态扩容，本篇使用扩容因子为 0.8
+- size()     长度
+- isEmpty()  判空
+- add()      增加
+- remove()   移除
+- set()      修改
+- contains() 查询是否包含该元素
+- findFirst()     查找元素下标
+- subList()  截取
+- toString() 重写
+```java
+package com.zxs.structure.list;
+
+/**
+ * @author 策君丶
+ * @create_date 2021-10-09  18:33:21
+ * @Message 动态数组
+ */
+public class MyArrayList<E> {
+
+//    内部数组
+    private E[] data;
+
+//    长度
+    private int size;
+
+//    扩容因子
+    private static double factor = 0.8;
+
+    /**
+     * 构造函数设置初始容量
+     * @param capacity
+     */
+    public MyArrayList(int capacity) {
+        this.size = 0;
+        data = (E[]) new Object[capacity];
+    }
+
+    /**
+     * 根据数组创建集合
+     * @param data
+     */
+    public MyArrayList(E[] data) {
+        this.data = data;
+        for (int i = 0; i < data.length; i++) {
+            if(data[i] != null){
+                size++;
+            }
+        }
+    }
+
+    public MyArrayList() {
+        this(10);
+    }
+
+    /**
+     * 获取长度
+     * @return
+     */
+    public int size(){
+        return size;
+    }
+
+    /**
+     * 判空
+     * @return
+     */
+    public boolean isEmpty(){
+        return size == 0;
+    }
+
+    /**
+     * 获取容量
+     * @return
+     */
+    public int getCapacity(){
+        return data.length;
+    }
+
+    /**
+     * 扩容
+     */
+    public void resize(){
+        E[] arr =(E[]) new Object[(int) (data.length * 1.5)];
+        for (int i = 0; i < size; i++) {
+            arr[i] = data[i];
+        }
+        data = arr;
+    }
+
+    /**
+     * 添加元素
+     * @param e
+     * @return
+     */
+    public MyArrayList add(E e){
+//        data[size++] = e;
+//        if(size == data.length * factor){
+//            resize();
+//        }
+//        return this;
+        return add(size,e);
+    }
+
+    public MyArrayList add(int index,E e){
+//        检查下标是否越界
+        if(index > size){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        int right = size;
+        while(right > index){
+            data[right] = data[right - 1];
+            right--;
+        }
+        data[index] = e;
+        size++;
+        if(size == data.length * factor){
+            resize();
+        }
+        return this;
+    }
+
+    /**
+     * 删除
+     */
+    public void remove(){
+//        data[size--] = null;
+        remove(size - 1);
+    }
+
+    public void remove(int index){
+        if(index >= size){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        while(index + 2 < size){
+            data[index] = data[index + 1];
+        }
+        size--;
+    }
+
+    /**
+     * 删除所有
+     */
+    public void removeAll(){
+        data = (E[]) new Object[10];
+        size = 0;
+    }
+
+    /**
+     * 移除指定元素
+     * @param e
+     */
+    public void removeValue(E e){
+        int i = 0;
+        while(i < size){
+            if(data[i].equals(e)){
+                break;
+            }
+        }
+        remove(i);
+    }
+
+    /**
+     * 移除所有指定元素
+     * @param e
+     */
+    public void removeAll(E e){
+        boolean[] flag = new boolean[size];
+        for (int i = 0; i < size; i++) {
+            if(data[i].equals(e)){
+                flag[i] = true;
+            }else{
+                flag[i] = false;
+            }
+        }
+        for (int i = 0; i < size; i++) {
+            if(flag[i]){
+                remove(i);
+            }
+        }
+    }
+
+    /**
+     * 修改
+     * @param index
+     * @param e
+     */
+    public void set(int index, E e){
+        if(index >= size){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        data[index] = e;
+    }
+
+    /**
+     * 获取指定下标元素
+     * @param index
+     * @return
+     */
+    public E get(int index){
+        if(index < size){
+            return data[index];
+        }
+        throw new ArrayIndexOutOfBoundsException();
+    }
+
+    /**
+     * 获取指定元素第一次出现的下标
+     * @param e
+     * @return
+     */
+    public int findFirst(E e){
+        for (int i = 0; i < size; i++) {
+            if(data[i].equals(e)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 查询是否存在（我偷懒了）
+     * @param e
+     * @return
+     */
+    public boolean contains(E e){
+        return findFirst(e) != -1;
+    }
+
+    /**
+     * 集合截取
+     * @param left
+     * @param len
+     * @return
+     */
+    public MyArrayList subList(int left, int len){
+        if(left + len >= size){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        E[] x = (E[]) new Object[size];
+        for (int i = 0; i < len; i++) {
+            x[i + left] = data[i];
+        }
+        return new MyArrayList(x);
+    }
+
+    /**
+     * toString的重写，方便打印
+     * @return
+     */
+    @Override
+    public String toString(){
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < size; i++) {
+            sb.append(data[i]).append(",");
+        }
+        if(sb.length() > 1) {
+            sb.replace(sb.length() - 1, sb.length(), "]");
+        }else{
+            sb.append("]");
+        }
+        return sb.toString();
+    }
+}
+```
+
+## 单链表
+- size()     长度
+- isEmpty()  判空
+- add()      增加
+- remove()   移除
+- set()      修改
+- contains() 查询是否包含该元素
+- findFirst()     查找元素下标
+- subList()  截取
+- toString() 重写
+```java
+package com.zxs.structure.list;
+
+import com.sun.istack.internal.NotNull;
+
+/**
+ * @author 策君丶
+ * @create_date 2021-10-09  18:57:51
+ * @Message 单链表
+ */
+public class SingleList<E> {
+
+    private class Node<E> {
+
+        public E value;
+        public Node next;
+
+        public Node() {
+        }
+
+        public Node(E value) {
+            this.value = value;
+        }
+
+        public Node(E value, Node next) {
+            this.value = value;
+            this.next = next;
+        }
+    }
+
+    private Node head;
+    private int size;
+
+    public SingleList(@NotNull Node node) {
+        this.head = node;
+        Node n = new Node(0,node);
+        while(n.next.value != null){
+            size++;
+            n = n.next;
+        }
+    }
+
+    public SingleList() {
+        head = new Node();
+        size = 0;
+    }
+
+    public int size(){
+        return size;
+    }
+
+    public boolean isEmpty(){
+        return size == 0;
+    }
+
+    public SingleList add(int index, E e){
+        if(index > size || index <0){
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        Node preHead = head;
+        while(index-- > 0){
+            preHead = preHead.next;
+        }
+        Node node = new Node(e);
+        node.next = preHead.next;
+        preHead.next = node;
+        size++;
+        return this;
+    }
+
+    public SingleList addFirst(E e){
+        return add(0,e);
+    }
+
+    public SingleList add(E e){
+        return add(size,e);
+    }
+
+    public void remove(int index){
+        Node node = head;
+        while(index-- > 0){
+            node = node.next;
+        }
+        node.next = node.next.next;
+        size--;
+    }
+
+    public void remove(E e){
+        Node node = head;
+        while(node != null && node.next != null){
+            if(node.next.value.equals(e)){
+                node.next = node.next.next;
+                size--;
+            }
+            node = node.next;
+        }
+    }
+
+    public void set(int index, E e){
+        Node node = head.next;
+        while(index-- > 0){
+            node = node.next;
+        }
+        node.value = e;
+    }
+
+    public void update(E e,E h){
+        Node node = head.next;
+        while(node != null){
+            if(node.value.equals(e)){
+                node.value = h;
+            }
+            node = node.next;
+        }
+    }
+
+    public E get(int index){
+        Node node = head.next;
+        while(index-- > 0){
+            node = node.next;
+        }
+        return (E)node.value;
+    }
+
+    public int findFirst(E e){
+        Node node = head.next;
+        int index = 0;
+        while(node != null){
+            if(node.value.equals(e)){
+                return index;
+            }
+            index++;
+        }
+        return -1;
+    }
+
+    public boolean contains(E e){
+        return findFirst(e) != -1;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("[");
+        Node node = head.next;
+        while(node != null){
+            sb.append(node.value.toString()).append(",");
+            node = node.next;
+        }
+        if(sb.length() > 1) {
+            sb.replace(sb.length() - 1, sb.length(), "]");
+        }else{
+            sb.append("]");
+        }
+        return sb.toString();
+    }
+}
+```
+## 对比
+- 动态数组、单链表分别实现的集合都具有他们本身的特点
+- 在有关查询的操作时，动态数组的效率稍高。
+- 在插入、删除时，单链表的效率则要高一些。
+- 动态数组侧重于扩容机制，单链表侧重于存储指针信息、节点信息。

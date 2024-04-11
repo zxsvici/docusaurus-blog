@@ -1,0 +1,92 @@
+---
+sidebar_position: 1
+title: 抽象工厂模式
+sidebar_label: 抽象工厂模式
+---
+
+## 基本概念
+抽象工厂模式是一种设计模式，用于解决多个相互关联或依赖的对象的创建问题。它针对的是产品族的创建，而不是单一产品的创建。
+
+在理解抽象工厂模式之前，需要了解两个重要概念：产品族和产品等级。
+
+- 产品族（Product Family）：位于不同产品等级结构中、功能相关联的产品组成的家族。
+
+- 产品等级（Product Level）：具有相同结构的产品组成的层级结构。
+
+抽象工厂模式的目标是提供一个接口，用于创建产品族的一组相关或相互依赖的对象，而无需指定它们的具体类。这样可以确保所创建的对象是相互兼容的，避免了产品不匹配的问题。
+
+## 案例
+我们有两种支付方式（信用卡支付和支付宝支付），分别由对应的工厂类创建。
+在美国使用美元支付时，我们使用了美元支付工厂创建信用卡支付对象；
+在中国使用人民币支付时，我们使用了人民币支付工厂创建支付宝支付对象。
+```java
+// 支付方式接口
+public interface PaymentMethod {
+    void processPayment();
+}
+
+// 美元支付工厂
+public class USDPaymentFactory implements PaymentFactory {
+    @Override
+    public PaymentMethod createPaymentMethod() {
+        return new CreditCardPayment();
+    }
+}
+
+// 人民币支付工厂
+public class CNYPaymentFactory implements PaymentFactory {
+    @Override
+    public PaymentMethod createPaymentMethod() {
+        return new AlipayPayment();
+    }
+}
+
+// 信用卡支付
+public class CreditCardPayment implements PaymentMethod {
+    @Override
+    public void processPayment() {
+        System.out.println("Processing credit card payment");
+    }
+}
+
+// 支付宝支付
+public class AlipayPayment implements PaymentMethod {
+    @Override
+    public void processPayment() {
+        System.out.println("Processing Alipay payment");
+    }
+}
+
+// 支付工厂接口
+public interface PaymentFactory {
+    PaymentMethod createPaymentMethod();
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // 在美国使用美元支付
+        PaymentFactory usdFactory = new USDPaymentFactory();
+        PaymentMethod usPaymentMethod = usdFactory.createPaymentMethod();
+        usPaymentMethod.processPayment(); // 输出：Processing credit card payment
+
+        // 在中国使用人民币支付
+        PaymentFactory cnyFactory = new CNYPaymentFactory();
+        PaymentMethod cnyPaymentMethod = cnyFactory.createPaymentMethod();
+        cnyPaymentMethod.processPayment(); // 输出：Processing Alipay payment
+    }
+}
+
+```
+
+## 总结
+### 优点
+
+- 产品族的创建：抽象工厂模式能够帮助我们创建一组相关或相互依赖的产品对象，而无需关心具体的实现细节。这样可以确保所创建的对象是相互兼容的，避免了产品不匹配的问题。
+- 封装变化：通过引入抽象工厂接口和具体工厂类，将产品的创建过程封装在工厂类中，使得客户端可以独立于产品的创建过程。这样在需要改变产品创建方式时，只需修改对应的工厂类，而不会影响到客户端。
+- 易于替换：由于客户端只依赖于抽象工厂接口和产品接口，所以在需要更换具体的产品族时，只需替换对应的具体工厂类即可，无需修改客户端代码。
+
+### 缺点
+
+- 修改困难：如果要新增或删除一个产品族，需要修改所有的具体工厂类，这违反了对修改关闭、对扩展开放的设计原则。这样的修改可能会影响到现有的系统稳定性，需要谨慎考虑。
+- 复杂性增加：随着产品族的增多，抽象工厂模式的类结构会变得更加复杂，维护成本也会增加。特别是在产品族之间存在较多差异的情况下，可能会导致类结构的扩展性变差。
+- 灵活性受限：抽象工厂模式在一定程度上限制了系统的灵活性。由于工厂类已经预先定义了一组产品族，因此无法在运行时动态地切换或创建新的产品族，这可能会影响到系统的可扩展性和灵活性。

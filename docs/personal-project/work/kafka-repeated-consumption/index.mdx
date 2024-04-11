@@ -1,0 +1,60 @@
+---
+sidebar_position: 0
+title: kafka重复消费问题排查和解决
+sidebar_label: kafka重复消费问题排查和解决
+---
+
+## 了解Kafka消费者相关配置
+
+Kafka的消费者相关配置参数包括：
+
+- **fetch.min.bytes**：每次拉取请求中能从Kafka中拉取的最小数据量。
+- **fetch.max.bytes**：一次拉取数据的最大数据量。
+- **fetch.wait.max.ms**：等待消费端请求的最长等待时间。
+- **enable.auto.commit**：表示消费者会周期性自动提交消费的offset。默认值为true。
+- **auto.commit.interval.ms**：自动提交的间隔时间。默认值为5秒。
+- **max.poll.records**：单次消费者拉取的最大数据条数，默认值为500。
+- **max.poll.interval.ms**：若消费者在阈值时间内没有消费完上一次poll的消息，则会触发Rebalance。默认值为5分钟。
+- **session.timeout.ms**：Group Coordinator检测consumer发生崩溃所需的时间。默认值为10秒。
+- **heartbeat.interval.ms**：Consumer向Coordinator发心跳包的时间间隔。默认值为3秒。
+
+## poll机制
+- 每次poll的消息处理完成之后再进行下一次poll，是同步操作。
+- 每次poll之前检查是否可以进行位移提交，如果可以，则会提交上一次轮询的位移。
+- 每次poll时，consumer尝试使用上次消费的offset作为起始offset，然后拉取消息。
+
+## 再均衡
+再均衡是将分区的所有权从一个消费者转移到其他消费者的行为。触发再均衡的情况包括新消费者加入、消费者心跳超时、消费者处理消息超时等。
+
+## 重复消费的原因
+
+1. **消费者宕机、重启或被强行kill进程**：导致消费者消费的offset没有提交。
+2. **enable.auto.commit为true**：若在关闭消费者进程之前取消了订阅，则部分offset未提交，下次重启会重复消费。
+3. **消费后的数据处理耗时**：处理消息的耗时超过了session.timeout.ms，触发Rebalance，可能导致重复消费。
+
+## 解决重复消费的方法
+
+### **提高消费者的处理速度**
+通过异步处理消息、利用多线程处理等方式缩短单条消息的消费时间，并调整max.poll.interval.ms和max.poll.records的值。
+### **引入消息去重机制**
+在消息中加入唯一标识符，在消费端保存最近的消息id，并进行去重。
+### **保证消费者逻辑幂等**
+确保消费逻辑具有幂等性，即多次执行相同操作产生的效果与执行一次相同操作产生的效果相同。
+### **实现再均衡监听器**
+```java
+consumer.subscribe(Collections.singletonList("topic"), new ConsumerRebalanceListener() {
+    @Override
+    public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+        // 在再均衡前提交位移
+        consumer.commitSync();
+    }
+
+    @Override
+    public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+        // 消费者重新分配分区后执行的操作
+    }
+});
+```
+
+## 排查方法
+重复消费问题的排查和解决包括调整拉取消息的配置参数、异步处理消息、确保消息消费成功等措施，以减少再均衡带来的重复消费问题。

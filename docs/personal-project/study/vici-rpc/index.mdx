@@ -1,0 +1,46 @@
+---
+sidebar_position: 1
+title: 基于Netty的RPC项目
+sidebar_label: 基于Netty的RPC项目
+---
+
+## 简介
+本项目基于Netty + Redis/Zookeeper + Kyro/protostuff/jsoniter 实现的RPC框架。项目并不完善，充斥着大量SPI等待你的实现，信我不是懒仅是为了更高的自由度。
+
+## 设计思路
+RPC => Remote procedure call，远程过程调用协议。简单的可以理解成 A 调用 B 变成 A 叫 C 去调用 B并且得到反馈。市面上这样的产品有很多，我们可以参考dubbo、open feign等...
+![rpc_pic1](https://www.zxsvici.fun/img/rpc_pic1.jpeg)
+在上图中，我们可以发现服务的提供者可以是多个，所以我们还需要提供负载均衡的功能，也需要由一定的熔断能力。
+![rpc_pic2](https://www.zxsvici.top/img/rpc_pic2.png)
+
+## 项目功能
+- 注册中心：默认实现了redis、zookeeper两种方式，还提供了SPI，可以自定义实现注册发现，推荐使用分布式组件。注册中心主要提供服务基本信息的注册（服务地址、Bean、方法）。
+- 请求代理：远程调用自然是发送请求了，请求的内容是 服务名称、版本、类名/bean注册的名字、参数列表，经过序列化、压缩、加密后发送。这三项也是提供了SPI，需要注意生产消费双方都要持有才可以正常运行，序列化默认提供Kyro/protostuff/jsoniter，压缩默认提供zip、gzip，加密默认跳过。
+![rpc_pic3](https://www.zxsvici.top/img/rpc_pic3.png)
+- 动态代理：看到上一项的请求体，大家应该都感觉到似乎和本地调用没有区别，只是多了服务名称、版本这两个信息，事实上确实如此。和普通的接口代理原理一致，唯一的区别在于这个方法的实现在别的应用中，我们只需要生成请求方法实现方应用的代理对象就可以了。
+- 负载均衡：因为服务的提供者可能是多个，如果你要问为什么是多个我建议你再多理解理解微服务，那么我们则需要翻牌选妃。默认实现了常见的四种策略 随机、最小连接、哈希、顺序。同样的，支持自定义实现。
+- 日志：记录基本的调用信息，可选字段，可增加字段，默认es、mysql存储，统统可以自定义。
+- 服务管理中心：用于查看服务调用状态、日志，图标分析。这一整个服务我都没写，留给你们自定义。
+
+## 项目结构
+![rpc_pic4](https://www.zxsvici.top/img/rpc_pic4.img)
+
+## 快速开始
+本地发布
+```shell
+git clone https://github.com/vicizxs/vici_rpc
+mvn install
+mvn build
+mvn deploy
+```
+
+在项目中引用
+```xml
+        <dependency>
+            <groupId>com.zxs.vici</groupId>
+            <artifactId>rpc-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+```
+
+<a href="https://www.zxsveni.top/file/vici_rpc.tar.gz">下载源码</a>，<a href="https://www.zxsveni.top/file/rpc-common.jar">下载jar</a>

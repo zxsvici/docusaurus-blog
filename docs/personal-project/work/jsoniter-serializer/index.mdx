@@ -1,0 +1,118 @@
+---
+sidebar_position: 0
+title: jsoniter序列化问题解决
+sidebar_label: jsoniter序列化问题解决
+---
+
+## LocalDate的序列化出现问题
+新项目开发，json处理框架定的是jsoniter。没用过，但好像都差不多，在官网上看看API也是直接开发了。
+
+然后在获取一个含有LocalDate字段定义的json字符串时，出现了报错
+![jsoniter报错](https://www.vicizxs.fun/img/jsoniter_error.png)
+
+## 源码
+```java
+    public static String serialize(Object obj) {
+        return serialize(JsoniterSpi.getCurrentConfig().escapeUnicode(), obj.getClass(), obj);
+    }
+
+    public static String serialize(boolean escapeUnicode, Type type, Object obj) {
+        JsonStream stream = JsonStreamPool.borrowJsonStream();
+        try {
+            stream.reset(null);
+            stream.writeVal(type, obj);
+            if (escapeUnicode) {
+                return new String(stream.buf, 0, stream.count);
+            } else {
+                return new String(stream.buf, 0, stream.count, "UTF8");
+            }
+        } catch (IOException e) {
+            throw new JsonException(e);
+        } finally {
+            JsonStreamPool.returnJsonStream(stream);
+        }
+    }
+
+    public final <T> void writeVal(Type type, T obj) throws IOException {
+        if (null == obj) {
+            writeNull();
+        } else {
+            Config config = currentConfig();
+            String cacheKey = config.getEncoderCacheKey(type);
+            Codegen.getEncoder(cacheKey, type).encode(obj, this);
+        }
+    }
+
+    public static Encoder getEncoder(String cacheKey, Type type) {
+        Encoder encoder = JsoniterSpi.getEncoder(cacheKey);
+        if (encoder != null) {
+            return encoder;
+        }
+        return gen(cacheKey, type);
+    }
+
+    public static Encoder getEncoder(String cacheKey) {
+        return encoders.get(cacheKey);
+    }
+
+    public synchronized static void addNewEncoder(String cacheKey, Encoder encoder) {
+        HashMap<String, Encoder> newCache = new HashMap<String, Encoder>(encoders);
+        if (encoder == null) {
+            newCache.remove(cacheKey);
+        } else {
+            newCache.put(cacheKey, encoder);
+        }
+        encoders = newCache;
+    }
+
+    private static void copyGlobalTypeEncoder(String configName, Type type, Encoder typeEncoder) {
+        addNewEncoder(TypeLiteral.create(type).getEncoderCacheKey(configName), typeEncoder);
+    }
+
+    public static void registerTypeEncoder(Class clazz, Encoder encoder) {
+        globalTypeEncoders.put(clazz, encoder);
+        copyGlobalTypeEncoder(getCurrentConfig().configName(), clazz, encoder);
+    }
+```
+这就是编码过程的一路加载，好在没什么事件监听，总体非常平滑。解码器逻辑是一致的，最终找到注册函数是
+```java
+    public static void registerTypeDecoder(Class clazz, Decoder decoder) {
+        globalTypeDecoders.put(clazz, decoder);
+        copyGlobalTypeDecoder(getCurrentConfig().configName(), clazz, decoder);
+    }
+```
+
+## 解决
+既然知道了注入编码、解码器的函数，直接注入就可以了。
+```java
+    public Encoder localDateTimeEncoder() {
+        return (obj, stream) -> {
+            if (obj == null) {
+                stream.writeNull();
+                return;
+            }
+            if (!(obj instanceof LocalDateTime)) {
+                throw new IOException("Encoder LocalDateTime supports only LocalDateTime");
+            }
+            LocalDateTime dateTime = (LocalDateTime) obj;
+            stream.writeVal(dateTime.toString());
+        };
+    }
+
+    public Decoder localDateTimeDecoder() {
+        return iter -> {
+            String str = iter.readString();
+            if(ObjectUtils.isEmpty(str)) {
+                return null;
+            }
+            return LocalDateTime.parse(str);
+        };
+    }
+
+    @PostConstruct
+    public void config() {
+        JsoniterSpi.registerTypeEncoder(LocalDateTime.class, localDateTimeEncoder());
+        JsoniterSpi.registerTypeDecoder(LocalDateTime.class, localDateTimeDecoder());
+    }
+```
+其他的序列化错误按照具体的类注入就可以了。

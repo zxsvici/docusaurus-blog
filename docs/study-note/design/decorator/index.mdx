@@ -1,0 +1,120 @@
+---
+sidebar_position: 1
+title: 装饰者模式
+sidebar_label: 装饰者模式
+---
+
+## 基本概念
+装饰者模式是一种结构型设计模式，允许向现有对象添加新功能而无需修改其代码。它通过将对象包装在装饰器类的实例中来实现这一点，这些装饰器类具有与原始对象相同的接口。这样，你可以在不改变原始对象的情况下，动态地添加、修改或删除功能。
+
+## 结构
+装饰者模式包括以下主要角色：
+
+- Component: 定义一个对象接口，可以给这些对象动态地添加职责。
+- ConcreteComponent: 实现Component接口的具体对象，是被装饰的原始对象。
+- Decorator: 继承Component并且持有一个Component对象的引用，通过调用这个引用对象的方法来增强其行为，可以选择性地覆盖它的方法，以实现特定的功能增强。
+- ConcreteDecorator: 扩展Decorator类，实现具体的装饰功能。
+
+## 实例
+### 自定义实现
+```java
+// Component
+interface Coffee {
+    double getCost();
+    String getDescription();
+}
+
+// ConcreteComponent
+class SimpleCoffee implements Coffee {
+    @Override
+    public double getCost() {
+        return 1.0;
+    }
+
+    @Override
+    public String getDescription() {
+        return "Simple Coffee";
+    }
+}
+
+// Decorator
+abstract class CoffeeDecorator implements Coffee {
+    protected final Coffee decoratedCoffee;
+
+    public CoffeeDecorator(Coffee coffee) {
+        this.decoratedCoffee = coffee;
+    }
+
+    @Override
+    public double getCost() {
+        return decoratedCoffee.getCost();
+    }
+
+    @Override
+    public String getDescription() {
+        return decoratedCoffee.getDescription();
+    }
+}
+
+// ConcreteDecorator
+class MilkDecorator extends CoffeeDecorator {
+    public MilkDecorator(Coffee coffee) {
+        super(coffee);
+    }
+
+    @Override
+    public double getCost() {
+        return super.getCost() + 0.5;
+    }
+
+    @Override
+    public String getDescription() {
+        return super.getDescription() + ", Milk";
+    }
+}
+
+class SugarDecorator extends CoffeeDecorator {
+    public SugarDecorator(Coffee coffee) {
+        super(coffee);
+    }
+
+    @Override
+    public double getCost() {
+        return super.getCost() + 0.2;
+    }
+
+    @Override
+    public String getDescription() {
+        return super.getDescription() + ", Sugar";
+    }
+}
+
+// Usage
+public class Main {
+    public static void main(String[] args) {
+        Coffee coffee = new SimpleCoffee();
+        coffee = new MilkDecorator(coffee);
+        coffee = new SugarDecorator(coffee);
+
+        System.out.println("Cost: " + coffee.getCost() + "; Ingredients: " + coffee.getDescription());
+    }
+}
+```
+以上是一个简单的实现示例，通过装饰器模式动态地给咖啡对象添加了额外的功能。
+
+### Java I/O
+Java I/O库中的装饰者模式主要体现在InputStream和OutputStream及其子类上。这些类允许你在输入和输出流上添加额外的功能，而无需改变原始的I/O类。
+
+#### BufferedInputStream 和 BufferedOutputStream
+这两个类是装饰器模式的典型例子。它们提供了缓冲功能，通过在底层输入或输出流周围包装一个缓冲区来增强性能。这样，你可以一次读取或写入一大块数据，而不是每次都从底层流中读取或写入一个字节。
+
+#### DataInputStream 和 DataOutputStream
+这些类允许读写基本数据类型的值，如int、double等。它们也是装饰者模式的例子，通过在底层输入或输出流周围包装一个数据流，使得可以方便地读写基本类型数据。
+
+#### ZipInputStream 和 ZipOutputStream
+这两个类用于读取和写入ZIP格式的压缩文件。它们也是装饰者模式的应用，通过在底层输入或输出流周围包装一个ZIP文件流，实现了读写ZIP文件的功能。
+
+这些装饰器类的使用方式与我们在自定义示例中所展示的方式类似。它们通过在现有类的基础上包装额外的功能来实现装饰者模式，使得输入输出流的功能更加灵活和强大。这种设计使得Java I/O库成为一个功能强大且灵活的工具，能够满足各种输入输出需求。
+
+## 总结
+装饰者模式是一种灵活且强大的设计模式，它通过组合而不是继承的方式来增加对象的功能。这种模式使得代码更具灵活性和可扩展性，同时遵循了面向对象设计原则中的开放-封闭原则。然而，在使用装饰者模式时，需要注意避免过多的装饰器层级，以免造成代码复杂度过高的问题。

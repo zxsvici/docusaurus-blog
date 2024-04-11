@@ -1,0 +1,44 @@
+.features {
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.featureSvg {
+  height: 200px;
+  width: 200px;
+}
+
+.blog-img {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  background-size: cover;
+  background-repeat: no-repeat; /* 防止背景图像重复 */
+  background-position: center center; /* 将背景图像居中对齐 */
+}
+
+.blog-img-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: opacity 0.25s ease;
+  background-position: center center;
+}
+
+.blog-title {
+  font-family: 'Zhi Mang Xing', cursive;
+  font-size: 200px;
+  color: lightgreen;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* 添加阴影 */;
+  z-index: 999;
+}

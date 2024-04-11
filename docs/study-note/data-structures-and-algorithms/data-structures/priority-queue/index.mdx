@@ -1,0 +1,129 @@
+---
+sidebar_position: 1
+title: 集合(四)优先队列
+sidebar_label: 集合(四)优先队列
+---
+
+## 补全
+在先前实现的MyArrayList中添加交换位置的方法
+```java
+    public void swap(int i, int j) {
+        E e = data[i];
+        data[i] = data[j];
+        data[j] = e;
+    }
+```
+## 使用MyArrayList实现大顶堆
+```java
+public class MaxHeap<E extends Comparable<E>> {
+    private MyArrayList<E> data; // 存放动态数组
+
+    // 构造函数，根据指定容量创建最大堆
+    public MaxHeap(int capacity){
+        data = new MyArrayList<>(capacity);
+    }
+
+    // 无参构造函数，默认容量为10
+    public MaxHeap(){
+        data = new MyArrayList<>();
+    }
+
+    // 通过传入数组构建最大堆
+    public MaxHeap(E[] arr){
+        data = new MyArrayList<>(arr);
+        for(int i = (arr.length-1-1)/2; i >= 0; i--)
+            down(i); // 从最后一个非叶子节点开始进行下沉操作，使得堆满足最大堆的性质
+    }
+
+    // 获取堆中元素的个数
+    public int size(){
+        return data.size();
+    }
+
+    // 判断堆是否为空
+    public boolean isEmpty(){
+        return data.isEmpty();
+    }
+
+    // 向堆中添加元素
+    public void add(E e){
+        data.add(e); // 在数组末尾添加元素
+        up(data.size() - 1); // 进行上浮操作，维护最大堆的性质
+    }
+
+    // 上浮操作，使得元素上浮到合适的位置
+    private void up(int index) {
+        while(data.get(index).compareTo(data.get((index-1)/2)) > 0){ // 当元素比其父节点大时，继续上浮
+            data.swap(index,(index-1)/2); // 交换元素与其父节点
+            index = (index-1)/2; // 继续向上比较
+        }
+    }
+
+    // 获取堆中的最大元素
+    public E findMax(){
+        if(data.size() == 0)
+            throw new IllegalArgumentException("Can not findMax when heap is empty.");
+        return data.get(0);
+    }
+
+    // 下沉操作，使得元素下沉到合适的位置
+    private void down(int i) {
+        int L = 2 * i + 1; // 左孩子的索引
+        while(L < data.size()){ // 当存在左孩子时，进行下沉操作
+            int maxIdx = L + 1 < data.size() && data.get(L+1).compareTo(data.get(L)) > 0 ? L+1 : L; // 找到左右孩子中的较大值
+            maxIdx = data.get(i).compareTo(data.get(maxIdx)) > 0 ? i : maxIdx; // 找到当前节点与其左右孩子中的较大值
+            if(maxIdx == i) break; // 当前节点已经满足最大堆的性质，退出循环
+
+            data.swap(i,maxIdx); // 交换当前节点与较大孩子节点
+            i = maxIdx; // 更新当前节点索引
+            L = 2 * i + 1; // 更新左孩子索引
+        }
+    }
+
+}
+```
+
+## 实现优先队列
+```java
+public class MyPriorityQueue<E extends Comparable<E>> {
+
+    private MaxHeap<E> maxHeap; // 使用最大堆实现优先队列
+
+    // 无参构造函数，初始化最大堆
+    public MyPriorityQueue(){
+        maxHeap = new MaxHeap<>();
+    }
+
+    // 获取优先队列中元素的个数
+    public int getSize() {
+        return maxHeap.size();
+    }
+
+    // 判断优先队列是否为空
+    public boolean isEmpty() {
+        return maxHeap.isEmpty();
+    }
+
+    // 入队操作，将元素插入优先队列
+    public void enqueue(E e) {
+        maxHeap.add(e);
+    }
+
+    // 出队操作，取出优先队列中的最大元素
+    public E dequeue() {
+        return maxHeap.extractMax();
+    }
+
+    // 获取优先队列中的最大元素（队首元素）
+    public E getFront() {
+        return maxHeap.findMax();
+    }
+}
+```    }
+
+    // 获取优先队列中的最大元素（队首元素）
+    public E getFront() {
+        return maxHeap.findMax();
+    }
+}
+```

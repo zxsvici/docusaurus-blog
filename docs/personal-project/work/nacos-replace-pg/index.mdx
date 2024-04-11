@@ -1,0 +1,180 @@
+---
+sidebar_position: 1
+title: nacos切换PG数据源
+sidebar_label: nacos切换PG数据源
+---
+
+## 源码下载
+```shell
+https://gitee.com/mirrors/Nacos.git
+```
+## 配置pg数据源
+### 修改nacos-console模块下的数据源配置项
+```properties
+#*************** Config Module Related Configurations ***************#
+### If use MySQL as datasource:
+#spring.datasource.platform=mysql
+spring.datasource.platform=postgresql
+
+### Count of DB:
+db.num=1
+
+### Connect URL of DB:
+#db.url.0=jdbc:mysql://127.0.0.1:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=UTC
+db.url.0=jdbc:postgresql://127.0.0.1:5432/nacos
+db.user.0=username
+db.password.0=userpwd
+```
+### 修改配置类中的配置
+- ExternalDataSourceProperties.java
+```java
+//    private static final String JDBC_DRIVER_NAME = "com.mysql.cj.jdbc.Driver";
+// 修改为pg的驱动
+    private static final String JDBC_DRIVER_NAME = "org.postgresql.Driver";
+```
+- PropertiesConstant.java
+```java
+
+    public static final String MYSQL = "mysql";
+    // 增加 pg 的配置
+    public static final String PG = "postgresql";
+```
+- PropertyUtil.java
+```java
+            // External data sources are used by default in cluster mode
+            //setUseExternalDB(PropertiesConstant.MYSQL.equalsIgnoreCase(getString(PropertiesConstant.SPRING_DATASOURCE_PLATFORM, "")));
+//可以设置判断
+    setUseExternalDB(PropertiesConstant.MYSQL.equals(PropertiesConstant.SPRING_DATASOURCE_PLATFORM) || PropertiesConstant.PG.equals(PropertiesConstant.SPRING_DATASOURCE_PLATFORM));
+// 也可以直接设置为true，毕竟咱们就在整这个
+//            setUseExternalDB(true);
+```
+- StartingApplicationListener.java
+```java
+private void judgeStorageMode(ConfigurableEnvironment env) {
+
+        // External data sources are used by default in cluster mode
+//        boolean useExternalStorage = (DEFAULT_DATABASE.equalsIgnoreCase(env.getProperty(DATASOURCE_PLATFORM_PROPERTY, DEFAULT_DATASOURCE_PLATFORM)));
+        //直接设置或者判断，确实可以直接赋值 true
+        boolean useExternalStorage = ("postgresql".equals(env.getProperty(DATASOURCE_PLATFORM_PROPERTY)));
+
+        // must initialize after setUseExternalDB
+        // This value is true in stand-alone mode and false in cluster mode
+        // If this value is set to true in cluster mode, nacos's distributed storage engine is turned on
+        // default value is depend on ${nacos.standalone}
+
+        if (!useExternalStorage) {
+            boolean embeddedStorage = EnvUtil.getStandaloneMode() || Boolean.getBoolean("embeddedStorage");
+            // If the embedded data source storage is not turned on, it is automatically
+            // upgraded to the external data source storage, as before
+            if (!embeddedStorage) {
+                useExternalStorage = true;
+            }
+        }
+
+        LOGGER.info("Nacos started successfully in {} mode. use {} storage",
+                System.getProperty(MODE_PROPERTY_KEY_STAND_MODE), useExternalStorage ? DATASOURCE_MODE_EXTERNAL : DATASOURCE_MODE_EMBEDDED);
+    }
+```
+## 修改SQL
+数据源的切换总是避免不了SQL的重写，万幸PG 和 MySQL基础语法几乎一致。
+### 分页查询
+将源码中所有 limit start , size 替换为 offset start limit size
+```sql
+-- nacos默认mysql的样例语句
+select * from mysql limit start,size;
+-- 可修改为以下语句，mysql、pg通用
+select * from pg offset start limit size;
+```
+- ExternalStoragePaginationHelperImpl.java
+```java
+	//line 96
+        } else {
+//            selectSql = sqlFetchRows + " LIMIT " + startRow + "," + pageSize;
+            selectSql = sqlFetchRows + " LIMIT " + pageSize + " OFFSET " + startRow;
+        }
+```
+- EmbeddedStoragePersistServiceImpl.java
+```java
+	//line 1245
+        String sql = "SELECT tenant_id FROM config_info WHERE tenant_id != '' GROUP BY tenant_id offset ? limit ?";
+	//line 1258
+        String sql = "SELECT group_id FROM config_info WHERE tenant_id ='' GROUP BY group_id offset ? limit ?";
+	// line 1323
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,app_name,content,md5 "
+                + " FROM ( SELECT id FROM config_info  WHERE tenant_id LIKE ? ORDER BY id offset ? limit ? )"
+                + " g, config_info t  WHERE g.id = t.id ";
+	//line 1370
+	String sqlFetchRows = "SELECT t.id,data_id,group_id,content,md5 "
+                + " FROM ( SELECT id FROM config_info ORDER BY id offset ? limit ? )  "
+                + " g, config_info t WHERE g.id = t.id ";
+
+	//line 1397
+	String select =
+                "SELECT id,data_id,group_id,tenant_id,app_name,content,md5,gmt_modified,type FROM config_info WHERE id > ? "
+                        + "ORDER BY id ASC offset ? limit ?";
+	//line 1409
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,app_name,content,md5,gmt_modified,beta_ips "
+                + " FROM (  SELECT id FROM config_info_beta ORDER BY id offset ? limit ?  )"
+                + " g, config_info_beta t WHERE g.id = t.id  ";
+	//line 1422
+	String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,tag_id,app_name,content,md5,gmt_modified "
+                + " FROM ( SELECT id FROM config_info_tag  ORDER BY id offset ? limit ? ) "
+                + " g, config_info_tag t  WHERE g.id = t.id ";
+	//line 1750
+        String sqlFetchRows =
+                "SELECT data_id,group_id,tenant_id,datum_id,app_name,content FROM config_info_aggr WHERE data_id=? AND "
+                        + "group_id=? AND tenant_id=? ORDER BY datum_id offset ? limit ?";
+
+	//line 2340
+	String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,app_name,type,md5,gmt_modified FROM ( SELECT id FROM config_info ORDER BY id offset ? limit ?  ) g, config_info t WHERE g.id = t.id";
+```
+- ExternalStoragePersistServiceImpl.java
+```java
+	//line 1335
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,app_name,content,md5 "
+                + " FROM (  SELECT id FROM config_info WHERE tenant_id LIKE ? ORDER BY id offset ? limit ? )"
+                + " g, config_info t  WHERE g.id = t.id ";
+	//line 1394
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,content,md5"
+                + " FROM ( SELECT id FROM config_info ORDER BY id offset ? limit ?  ) "
+                + " g, config_info t  WHERE g.id = t.id ";
+	//line 1411
+        String sqlFetchRows = " SELECT t.id,type,data_id,group_id,tenant_id,app_name,content,type,md5,gmt_modified "
+                + " FROM ( SELECT id FROM config_info   ORDER BY id offset ? limit ?  )"
+                + " g, config_info t WHERE g.id = t.id ";
+	//line 1429
+        String select = "SELECT id,data_id,group_id,tenant_id,app_name,content,md5,gmt_modified,type FROM config_info WHERE id > ? ORDER BY id ASC offset ? limit ?";
+	//line 1443
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,app_name,content,md5,gmt_modified,beta_ips "
+                + " FROM ( SELECT id FROM config_info_beta  ORDER BY id offset ? limit ?  )"
+                + "  g, config_info_beta t WHERE g.id = t.id ";
+	//line 1460
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,tag_id,app_name,content,md5,gmt_modified "
+                + " FROM (  SELECT id FROM config_info_tag  ORDER BY id offset ? limit ? ) "
+                + "g, config_info_tag t  WHERE g.id = t.id  ";
+	//line 2561
+        String sqlFetchRows = " SELECT t.id,data_id,group_id,tenant_id,app_name,md5,type,gmt_modified FROM "
+                + "( SELECT id FROM config_info ORDER BY id offset ? limit ?  ) g, config_info t WHERE g.id = t.id";
+```
+- GroupCapacityPersistService.java
+```java
+
+### 查询主键
+```java
+	//line 2071  ExternalStoragePersistServiceImpl.java,
+	//line 124   GroupCapacityPersistService.java
+	//line 106   TenantCapacityPersistService.java
+	PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
+```
+### 运行项目
+- 编译
+entity在编译时自动生成
+```shell
+mvn compiler
+```
+编译后查看nacos-consistency模块的target目录是否生成entity文件目录
+### 运行
+启动 nacos-console模块的 Application启动类、
+### 访问8848
+http://127.0.0.1:8848/nacos
+

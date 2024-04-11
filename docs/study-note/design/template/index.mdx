@@ -1,0 +1,107 @@
+---
+sidebar_position: 1
+title: 模板模式
+sidebar_label: 模板模式
+---
+
+## 基本概念
+模板方法模式是一种类的行为模式。它定义了一个算法的骨架，将算法的一些步骤延迟到子类中实现。这使得子类可以在不改变算法结构的情况下重新定义算法的某些步骤。
+
+在现实生活和软件开发中都有很多类似的情况。例如，在购物过程中，可能有一系列固定的步骤，但是每个步骤的具体实现可能因人而异或者根据不同的需求而变化。模板方法模式提供了一种解决方案，使得我们可以定义一个算法的骨架，其中的某些步骤由子类实现，从而实现算法的个性化定制。
+
+## 结构
+模板方法模式通常包含以下结构：
+
+- 抽象类（Abstract Class）：定义了一个模板方法，其中包含了算法的骨架，具体的步骤由子类实现。同时可能包含一些具体方法和钩子方法，这些方法可以在模板方法中被调用。
+
+- 具体子类（Concrete Class）：实现了抽象类中的抽象方法，完成了算法中的具体步骤，从而实现了算法的个性化定制。
+
+基本结构示意图如下：
+
+```shell
++------------------------+     +-------------------------+
+|      Abstract Class    |     |      Concrete Class     |
++------------------------+     +-------------------------+
+|  templateMethod()      |     |  implementationMethod() |
+|  abstractMethod()      |     |  abstractMethod()       |
+|  hookMethod()          |     |  hookMethod()           |
++------------------------+     +-------------------------+
+```
+## 案例
+我们来实现一个购物的场景，在这个场景下，人们可能会购买不同类型的商品，但整个购物过程中的一些步骤是相同的，比如登录网站、浏览商品、付款等。
+```java
+public abstract class Shopping {
+
+    // 模板方法
+    public void buyGoods(){
+        login();            // 固定的方法，子类不能重写
+        browseProducts();   // 抽象方法，子类必须实现
+        payment();          // 钩子方法，子类可以选择性重写
+    }
+
+    // 固定方法(最终方法)
+    public final void login() {
+        System.out.println("登录网站");
+    }
+
+    // 抽象方法
+    public abstract void browseProducts();
+
+    // 钩子方法
+    public void payment(){
+        System.out.println("使用信用卡付款");
+    }
+}
+```
+具体的子类实现：
+```java
+public class ElectronicsShopping extends Shopping {
+@Override
+public void browseProducts() {
+System.out.println("浏览电子产品");
+}
+}
+java
+Copy code
+public class GroceryShopping extends Shopping {
+@Override
+public void browseProducts() {
+System.out.println("浏览食品杂货");
+}
+
+    // 重写了钩子方法
+    @Override
+    public void payment() {
+        System.out.println("使用支付宝付款");
+    }
+}
+```
+测试代码:
+```java
+public class ShoppingTest {
+
+    public static void main(String[] args){
+        Shopping electronicsShopping = new ElectronicsShopping();
+        electronicsShopping.buyGoods();
+
+        System.out.println("-----------------------");
+
+        Shopping groceryShopping = new GroceryShopping();
+        groceryShopping.buyGoods();
+    }
+}
+```
+运行结果：
+```markdown
+登录网站
+浏览电子产品
+使用信用卡付款
+-----------------------
+登录网站
+浏览食品杂货
+使用支付宝付款
+```
+通过这个例子，我们可以看到无论是购物、旅行还是其他场景，只要有一系列的固定步骤，就可以使用模板方法模式来实现。
+
+## 总结
+模板方法模式提供了一种在父类中定义算法框架，在子类中实现具体步骤的方式。它可以有效地减少代码的重复，并提高了代码的可维护性。在设计中，我们可以根据需要使用抽象方法、最终方法和钩子方法来灵活地定义模板方法的结构。

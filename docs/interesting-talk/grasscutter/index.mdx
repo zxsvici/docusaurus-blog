@@ -1,0 +1,188 @@
+---
+sidebar_position: 0
+title: 原神私服搭建
+sidebar_label: 原神私服搭建
+---
+
+## [整合包](https://www.vicizxs.fun/file/grasscutter.tar.gz)
+新版需要自行前往github下载
+[割草机](https://github.com/Grasscutters/Grasscutter)
+[资源](https://github.com/Koko-boya/Grasscutter_Resources)
+
+## 环境准备
+Java17 + MongoDB + python3 + 代理/抓包软件
+## 准备资源
+```shell
+tar xf grasscutter.tar.gz
+cd grasscutter/grasscutter
+```
+
+## 运行
+配置config.json或者直接修改代码emu.grasscutter.config.ConfigContainer，但是相关配置都是弄好了的，直接idea打开，等待依赖拉取完成运行即可，默认端口是22102.
+```json
+{
+  "folderStructure": {
+    "resources": "./resources/",
+    "data": "./data/",
+    "packets": "./packets/",
+    "scripts": "./resources/Scripts/",
+    "plugins": "./plugins/"
+  },
+  "databaseInfo": {
+    "server": {
+      "connectionUri": "mongodb://localhost:27017",
+      "collection": "grasscutter"
+    },
+    "game": {
+      "connectionUri": "mongodb://localhost:27017",
+      "collection": "grasscutter"
+    }
+  },
+  "language": {
+    "language": "zh_CN",
+    "fallback": "en_US",
+    "document": "EN"
+  },
+  "account": {
+    "autoCreate": true,
+    "defaultPermissions": [],
+    "maxPlayer": -1
+  },
+  "server": {
+    "debugLevel": "NONE",
+    "runMode": "HYBRID",
+    "http": {
+      "bindAddress": "0.0.0.0",
+      "accessAddress": "服务器公网IP",
+      "bindPort": 444,
+      "accessPort": 0,
+      "encryption": {
+        "useEncryption": true,
+        "useInRouting": true,
+        "keystore": "./keystore.p12",
+        "keystorePassword": "123456"
+      },
+      "policies": {
+        "cors": {
+          "enabled": false,
+          "allowedOrigins": [
+            "*"
+          ]
+        }
+      },
+      "files": {
+        "indexFile": "./index.html",
+        "errorFile": "./404.html"
+      }
+    },
+    "game": {
+      "bindAddress": "0.0.0.0",
+      "accessAddress": "服务器公网IP",
+      "bindPort": 22102,
+      "accessPort": 0,
+      "loadEntitiesForPlayerRange": 100,
+      "enableScriptInBigWorld": false,
+      "enableConsole": true,
+      "gameOptions": {
+        "inventoryLimits": {
+          "weapons": 2000,
+          "relics": 2000,
+          "materials": 2000,
+          "furniture": 2000,
+          "all": 30000
+        },
+        "avatarLimits": {
+          "singlePlayerTeam": 5,
+          "multiplayerTeam": 6
+        },
+        "sceneEntityLimit": 1000,
+        "watchGachaConfig": false,
+        "enableShopItems": true,
+        "staminaUsage": true,
+        "energyUsage": false,
+        "resinOptions": {
+          "resinUsage": false,
+          "cap": 160,
+          "rechargeTime": 480
+        },
+        "rates": {
+          "adventureExp": 1.0,
+          "mora": 1.0,
+          "leyLines": 1.0
+        }
+      },
+      "joinOptions": {
+        "welcomeEmotes": [
+          2007,
+          1002,
+          4010
+        ],
+        "welcomeMessage": "Welcome to \u003ccolor\u003dred\u003eGenshin!",
+        "welcomeMail": {
+          "title": "Welcome to Genshin",
+          "content": "Hi there!\r\nFirst of all, welcome to Ghenshin!",
+          "sender": "aila",
+          "items": [
+            {
+              "itemId": 13509,
+              "itemCount": 1,
+              "itemLevel": 1
+            },
+            {
+              "itemId": 201,
+              "itemCount": 99999,
+              "itemLevel": 1
+            }
+          ]
+        }
+      },
+      "serverAccount": {
+        "avatarId": 10000029,
+        "nameCardId": 210001,
+        "adventureRank": 60,
+        "worldLevel": 8,
+        "nickName": "Server-aila",
+        "signature": "Welcome to Genshin"
+      }
+    },
+    "dispatch": {
+      "regions": [],
+      "defaultName": "Genshin"
+    }
+  },
+  "version": 3
+}
+```
+## 安装证书
+首次连接需要安全证书，以下是具体操作
+![证书导入](https://www.vicizxs.fun/img/grasscutter_import.png)
+![next](https://www.vicizxs.fun/img/grasscutter_import_next.png)
+![存储](https://www.vicizxs.fun/img/grasscutter_import_save.png)
+![导入完成](https://www.vicizxs.fun/img/grasscutter_import_complete.png)
+## 设置代理
+这个时候服务已经启动了，但是客户端连接的仍然是官网，我们需要拦截转发。
+### Fiddler
+我使用的是Fiddler，也可以去使用Mitmproxy等工具。
+下载Fiddler完成后，直接打开，找到 FiddlerScript
+![FiddlerScript](https://www.vicizxs.fun/img/fiddler_script.png)
+将资源包中代码复制至指定位置即可
+![rules](https://www.vicizxs.fun/img/fiddler_rules.png)
+
+## 服务端指令
+参考解压后的cmd.txt 文件
+
+## 启动客户端
+资源和客户端版本必须和grasscutter版本一致，其实我不知道不一样会咋样，没试过。。。可能是资源读取方面会出现问题
+
+### 在服务端创建用户
+```shell
+account create you_account uid
+```
+
+### 进入游戏happy吧
+
+![登录](https://www.vicizxs.fun/img/grasscutter_login.png)
+![游玩](https://www.vicizxs.fun/img/grasscutter_play.png)
+![金手指/聊天框指令](https://www.vicizxs.fun/img/grasscutter_chat_cmd.png)
+
+## 虽然能改概率，但是私服也这么打保底是真的崩溃！！！

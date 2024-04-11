@@ -1,0 +1,258 @@
+---
+sidebar_position: 0
+title: 毕业设计-B/S实时通讯系统的设计和实现
+sidebar_label: 毕业设计-B/S实时通讯系统的设计和实现
+---
+
+## 背景
+本项目是一个基于 B/S 模式的即时通讯软件，类似于 Web QQ，旨在实现即时通讯的功能，并作为毕业设计的一部分进行设计与实现。
+![毕设课题](http://www.vicizxs.fun/img/graduation_project_topic.png)
+只有3行字且没有一点具体需求，刚看到的时候有些不知所措...
+
+## 需求挖掘
+### 通讯模块
+既然是即时通讯，那么重点一定在通讯上了
+- 聊天
+- - 沟通方式：单聊、群聊
+- - 消息种类：文字、表情、文件、语音、视频
+- - 接收和存储：实时推送、离线消息推送、历史记录加载
+- 管理
+- - 好友：添加、删除、备注、查询
+- - 群组：添加、删除、管理、查询
+- - 个人：个签、昵称、状态
+
+这是初版设计的全部功能，写完后发现页面数量达不到学校的毕业设计要求。可是我这里已经实现了web qq的基本功能了，说实话作为毕设
+这里的工作量肯定是达标了，但是...
+
+没办法，只能塞个qq空间进来了，正好想自己写个博客系统，融一下吧！
+
+### 博客模块
+- 博客：后台增删改查、隐藏、发布，前台展示
+- 个人站点配置：首页图、个人介绍、
+- 评论：后台审核，前台展示
+- 分类：博客分类设置
+- 标签：博客标签设置
+
+## 通讯模块设计和实现
+使用全双工websocket协议实现交互，WebRTC实现通话，客户端发送消息，服务端根据接收者推送。
+```json tilte="demo_message.json"
+{
+    "type": "message_type", 消息类型
+    "senderId": 1, 发送者id
+    "receiverId": 2, 接收者id
+    "content": T 消息实体
+}
+```
+### 消息类型
+消息类型如下
+- 文本：text
+- 表情：emoji
+- 语音：voice
+- 视频：video
+- 文件：file
+- 语音通话：voice_call
+- 视频通话：video_call
+- 共享屏幕：share_screen
+
+
+虽然类型有这么多，但是对于websocket的交互信息只有json，只是消息的额外处理不同。
+#### 文本、表情
+客户端发送text类型请求，这是content是字符串
+```json title="demo_text.json"
+{
+    "type": "text",
+    "senderId": 1,
+    "receivers": 2,
+    "content": "Hello, Hello！"
+}
+```
+表情实质上就是文本，只是客户端拿到消息后解析类型然后折射。
+#### 语音、视频、文件
+这几个消息类型全部转化为文件上传，客户端处理文件即可
+
+##### 文件上传
+语音和视频需要选择文件或使用WebRTC录制，然后进行文件上传，上传完成后服务会返回文件地址。
+
+##### 发送json交互
+```json title="demo_voice.json"
+{
+    "type": "voice",
+    "senderId": 1,
+    "receivers": 2,
+    "content": "file_path"
+}
+```
+接收者拿到后根据类型使用相关组件播放查看即可
+
+#### 语音通话、视频通话、共享屏幕
+##### 用户1申请
+创建本地流,然后发送申请后，等待回复
+```json user_one_apply.json
+{
+    "type": "voice_call",
+    "senderId": 1,
+    "receiverId": 2,
+    "content": {
+        "type": "offer", // 发起通话请求
+        "sdp": "..." // 发起方的 Session Description Protocol
+    }
+}
+```
+
+##### 用户2回复申请
+如果是同意则会创建本地流,响应
+```json user_two_answer_apply.json
+{
+    "type": "voice_call",
+    "senderId": "user2",
+    "receiverId": "user1",
+    "content": {
+        "type": "answer", // 回复通话请求 reject为拒绝
+        "sdp": "..."
+    }
+}
+```
+##### WebRTC建立通话连接
+
+##### 通话关闭
+```json title="voice_call_close.json'
+{
+    "type": "voice_call",
+    "senderId": 1,
+    "receiverId": 2,
+    "content": {
+        "type": "close"
+    }
+}
+```
+
+##### WebRTC关闭通话连接
+```tsx title="WebRTC_conn_demo.js"
+// 创建 RTCPeerConnection 实例
+const peerConnection = new RTCPeerConnection();
+
+// 创建本地描述
+const offerDescription = await peerConnection.createOffer();
+await peerConnection.setLocalDescription(offerDescription);
+
+// 将本地描述发送给对方
+socket.send(JSON.stringify({
+    type: 'voice_call',
+    senderId: 'user1',
+    receiverId: 'user2',
+    content: {
+        type: 'offer',
+        sdp: offerDescription.sdp
+    }
+}));
+
+socket.on('message', async (message) => {
+    const data = JSON.parse(message);
+    if (data.type === 'voice_call' && data.content.type === 'answer') {
+        const answerDescription = new RTCSessionDescription({
+            type: 'answer',
+            sdp: data.content.sdp
+        });
+        await peerConnection.setRemoteDescription(answerDescription);
+
+        // 在收到远程描述后，连接建立完成，可以开始进行音视频通话
+    } else if (data.content.type === 'close') {
+            // 收到对方的关闭连接请求
+            // 关闭连接
+            peerConnection.close();
+    }
+});
+```
+
+### 消息存储
+消息状态：已读、未读、未接收(离线)
+所有消息都存储在MySQL中。
+
+#### 未读消息
+- **定义**：在线状态下收到消息但是未查看，我们需要提示用户查看。
+- **存储方式**：在MySQL中存储原始数据，在redis中存储未读消息计算
+- **实现**：在 Redis 中为每个用户维护一个键值对，键为用户ID，值为未读消息数量。
+当用户接收到新消息时，将对应用户的未读消息数量加1；当用户查看消息时，将未读消息数量清零。
+通过 Redis 的原子操作，可以确保在多用户同时操作时，能够正确地计算未读消息数量。
+#### 离线消息
+- **定义**：离线状态，有人发送消息
+- **存储方式**：在MySQL中存储原始数据
+- **实现**：在连接事件中查询数据库，检索出所有离线消息，组条推送
+
+## 好友、群组的设计和实现
+### 添加好友
+可通过userId、nickname(模糊)搜索添加
+### 添加群组
+- 通过groupId、groupName(模糊)搜索添加
+- 通过好友的邀请
+
+### 群组管理
+提供了简单的群友权限
+- 发言：即发送消息的权力
+- 查看：即查看消息和文件的能力
+- 屏蔽：可以屏蔽个别群员或整个群
+- 下载：下载文件
+
+提供了简单暴力的管理权限：群主可以控制群友的任何在群权限以及删除群友
+
+## 个人信息
+即昵称、性别等一些基础信息的配置
+
+## 博客模块的开发和集成
+博客模仿十三的[My-Blog](https://github.com/ZHENFENG13/My-Blog)
+
+很大的不同在于，我是集成在IM中的，存在租户的概念，所以数据时租户隔离的。通过租户标识的一致，博客模块可以很好的与通讯模块交互。
+
+## 项目实际效果
+### 首页
+![首页](https://www.vicizxs.fun/img/blog/home.png)
+### 好友列表
+![好友列表](https://www.vicizxs.fun/img/blog/friend_list.png)
+### 添加好友
+![添加好友](https://www.vicizxs.fun/img/blog/friend_add.png)
+### 群组列表
+![群组列表](https://www.vicizxs.fun/img/blog/group_list.png)
+### 添加群组
+![添加群组](https://www.vicizxs.fun/img/blog/add_group.png)
+### 群组管理
+![群组管理](https://www.vicizxs.fun/img/blog/group_manage.png)
+### 文字消息
+![文字消息](https://www.vicizxs.fun/img/blog/send_message_text.png)
+### 表情消息
+![表情消息](https://www.vicizxs.fun/img/blog/send_message_emoji.png)
+### 语音消息
+![语音消息](https://www.vicizxs.fun/img/blog/send_message_voice.png)
+### 视频消息
+![视频消息](https://www.vicizxs.fun/img/blog/send_message_video.png)
+### 语音通话
+![语音通话](https://www.vicizxs.fun/img/blog/send_message_voice_call.png)
+### 视频通话
+![视频通话](https://www.vicizxs.fun/img/blog/send_message_video_call.png)
+### 个人信息设置
+![个人信息设置](https://www.vicizxs.fun/img/blog/info_config.png)
+### 个人博客首页
+![博客首页](https://www.vicizxs.fun/img/blog/blog_home.png)
+### 博客详情
+![博客详情](https://www.vicizxs.fun/img/blog/blog_view_detail.png)
+### 博主信息页面
+![博主信息页面](https://www.vicizxs.fun/img/blog/blog_about.png)
+### 博客评论
+![博客评论](https://www.vicizxs.fun/img/blog/blog_comment.png)
+### 博客浏览统计
+![博客浏览统计](https://www.vicizxs.fun/img/blog/blog_dashboard.png)
+### 博客管理
+![博客管理](https://www.vicizxs.fun/img/blog/blog_manage.png)
+### 分类管理
+![分类管理](https://www.vicizxs.fun/img/blog/categoies_manage.png)
+### 标签管理
+![标签管理](https://www.vicizxs.fun/img/blog/tags_manage.png)
+### 评论管理
+![评论管理](https://www.vicizxs.fun/img/blog/comments_manage.png)
+### 站点配置
+![站点配置](https://www.vicizxs.fun/img/blog/blog_site_config.png)
+
+## 总结
+个人感觉这次项目除了群语音、视频未实现，页面非常丑以外，没有什么缺点！！！同时，恭喜自己毕业了！！！
+
+
+## 项目不可以开源哦，学校老师拿去给学生参赛了。。。

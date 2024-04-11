@@ -1,0 +1,102 @@
+---
+sidebar_position: 1
+title: nacos使用中CPU飙高问题排查解决
+sidebar_label: nacos使用中CPU飙高问题排查解决
+---
+
+## 起因
+线上应用总是伴随着运行时间增长CPU占比增高
+
+## 使用JProfile排查
+属于个人第一次使用根据排查问题了！！
+![CPU视图](https://www.vicizxs.fun/img/jprofile_cpu.png)
+![线程历史](https://www.vicizxs.fun/img/jprofile_thread_hsitory.png)
+很快的就发现线程数量一直在增加，增加的线程的名称都是com.alibaba.nacos.client.Worker.**。ok，确定了线程名称赶紧去源码中瞅瞅怎么个事。
+
+## 翻源码
+根据名称查询到
+```java
+    @SuppressWarnings("PMD.ThreadPoolCreationRule")
+    public ClientWorker(final HttpAgent agent, final ConfigFilterChainManager configFilterChainManager,
+            final Properties properties) {
+        this.agent = agent;
+        this.configFilterChainManager = configFilterChainManager;
+
+        // Initialize the timeout parameter
+
+        init(properties);
+
+        this.executor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r);
+                t.setName("com.alibaba.nacos.client.Worker." + agent.getName());
+                t.setDaemon(true);
+                return t;
+            }
+        });
+
+        this.executorService = Executors
+                .newScheduledThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread t = new Thread(r);
+                        t.setName("com.alibaba.nacos.client.Worker.longPolling." + agent.getName());
+                        t.setDaemon(true);
+                        return t;
+                    }
+                });
+
+        this.executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    checkConfigInfo();
+                } catch (Throwable e) {
+                    LOGGER.error("[" + agent.getName() + "] [sub-check] rotate check error", e);
+                }
+            }
+        }, 1L, 10L, TimeUnit.MILLISECONDS);
+    }
+```
+这里创建了一个定时死循环的检查配置的任务，根据守护线程的执行不受对象影响来看，多半是这里一直新建任务了。
+
+向前溯源
+
+```java
+    public NacosConfigService(Properties properties) throws NacosException {
+        ValidatorUtils.checkInitParam(properties);
+        String encodeTmp = properties.getProperty(PropertyKeyConst.ENCODE);
+        if (StringUtils.isBlank(encodeTmp)) {
+            this.encode = Constants.ENCODE;
+        } else {
+            this.encode = encodeTmp.trim();
+        }
+        initNamespace(properties);
+
+        this.agent = new MetricsHttpAgent(new ServerHttpAgent(properties));
+        this.agent.start();
+        this.worker = new ClientWorker(this.agent, this.configFilterChainManager, properties);
+    }
+```
+
+继续溯源
+```java
+    public static ConfigService createConfigService(Properties properties) throws NacosException {
+        try {
+            Class<?> driverImplClass = Class.forName("com.alibaba.nacos.client.config.NacosConfigService");
+            Constructor constructor = driverImplClass.getConstructor(Properties.class);
+            ConfigService vendorImpl = (ConfigService) constructor.newInstance(properties);
+            return vendorImpl;
+        } catch (Throwable e) {
+            throw new NacosException(NacosException.CLIENT_INVALID_PARAM, e);
+        }
+    }
+```
+
+最终看到了这么一段公司代码
+![code](https://www.vicizxs.fun./img/nitian.png)
+说实话没能理解，需要找相关同事了解具体逻辑才行。
+
+## 总结
+只要控制ConfigService的生成就可以，具体情况具体对待。

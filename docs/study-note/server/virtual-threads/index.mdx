@@ -1,0 +1,249 @@
+---
+sidebar_position: 1
+title: Java虚拟线程
+sidebar_label: Java虚拟线程
+---
+
+## 虚拟线程概念
+
+## 基本使用
+预览需要添加参数才可以使用API --enable-preview
+### 直接创建虚拟线程
+```java
+Thread virtual = Thread.startVirtualThread(() -> {
+    // TODO
+});
+```
+### 创建后手动执行
+```java
+Thread virtual = Thread.ofVirtual().unstarted(() -> {
+    // TODO
+});
+virtual.start();
+
+Thread.ofVirtual().start(() -> {
+    // TODO
+});
+```
+
+### 通过工厂创建
+```java
+// 创建ThreadFactory:
+ThreadFactory factory = Thread.ofVirtual().factory();
+// 创建VirtualThread:
+Thread virtual = factory.newThread(() -> {
+    // TODO
+});
+// 运行:
+virtual.start();
+```
+
+### 线程池
+```java
+ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+ThreadFactory factory = Thread.ofVirtual().factory();
+for (int i=0; i<100000; i++) {
+    Thread virtual = factory.newThread(() -> { ... });
+    executor.submit(virtual);
+    executor.submit(() -> {
+        //TODO
+    });
+}
+```
+
+## 传统并发模型与挑战
+- 传统模型： Java开发者长期依赖线程作为并发服务器应用的基础。每个方法在一个独立的线程内执行，各个线程相互独立地执行，有自己的堆栈和上下文。
+- 线程限制： 由于操作系统线程的成本高昂，线程数量受限，导致应用程序的吞吐量受限，无法充分利用硬件资源。
+
+## 异步风格的解决方案
+- 异步编程： 一些开发者放弃了传统的线程模型，转向使用异步编程。但异步编程需要使用一系列繁琐的API，放弃了传统的顺序组成运算符，如循环和try/catch块，增加了开发和调试的难度。
+- 线程共享： 异步编程中，请求的各个阶段可能在不同的线程上执行，导致调试和分析困难。
+
+## 虚拟线程的优势
+- 可扩展性： 虚拟线程保留了传统的线程每请求风格，使得应用程序可以更加轻松地扩展，同时与Java平台的设计和谐。
+- 资源利用率： 虚拟线程不会像操作系统线程那样消耗昂贵的资源，可以大量使用，优化地利用硬件资源。
+- 简化编程： 使用虚拟线程无需学习新的概念，保持与Java平台的一致性，并提供了易于使用的API，同时保留了传统的顺序组成运算符。
+
+## 虚拟线程与平台线程的比较
+### 简单睡眠执行对比
+```java
+    // 模拟随机IO密集型任务
+    static CompletableFuture[] randomIoTasks(ExecutorService executorService, int cnt, long timeout) {
+        try (var executor = executorService) {
+            return IntStream.range(0, cnt).mapToObj(i ->
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            Thread.sleep(timeout); // 模拟任务执行
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, executor)
+            ).toArray(CompletableFuture[]::new);
+        }
+    }
+
+    // 测试
+    public static void main(String[] args) {
+        // cnt: 任务数 timeout: 超时时间
+        int cnt = 1000, timeout = 100;
+        var start = System.currentTimeMillis();
+
+        // 虚拟线程池
+        CompletableFuture.allOf(randomIoTasks(Executors.newVirtualThreadPerTaskExecutor(), cnt, timeout)).join();
+
+        System.out.println("virtual thread => " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+
+        // 固定线程池
+        CompletableFuture.allOf(randomIoTasks(Executors.newFixedThreadPool(100), cnt, timeout)).join();
+
+        System.out.println("normal thread => " + (System.currentTimeMillis() - start));
+    }
+```
+我们通过调整**任务数量**、**任务IO时间**、**普通线程池的核心数量**，可以在控制台发现执行时间的比值似乎有着一定的规律。
+![测试1](https://www.vicizxs.fun/api/static/virtual/test_1.png)
+![测试2](https://www.vicizxs.fun/api/static/virtual/test_2.png)
+虚拟线程的时间是 x + timeout 不受阻塞影响， x是创建消耗时间
+
+普通线程则是 x + (cnt / coreSize) * timeout，线程被阻塞后就等待唤醒
+
+### CPU/IO 占比对虚拟线程的影响
+在上面的测试中，CPU的占比近乎为0，但实际的应用中CPU的占比不尽相同，纯IO的应用几乎没有。
+
+所以我们需要新的测试项，即 IO型 -> CPU型
+```java
+    // 启动随机IO任务
+    static CompletableFuture[] randomIoTasks(ExecutorService executorService, int cnt, long timeout, double cpuRatio) {
+        try (var executor = executorService) {
+            return IntStream.range(0, cnt).mapToObj(i ->
+                    CompletableFuture.runAsync(() -> task(timeout, cpuRatio), executor)
+            ).toArray(CompletableFuture[]::new);
+        }
+    }
+
+    /**
+     * 模拟任务
+     * @param timeout 任务总时间
+     * @param cpuRatio CPU占用比例
+     */
+    static void task(long timeout, double cpuRatio) {
+        try {
+            long start = System.currentTimeMillis();
+            long cpuTime = (long) (timeout * cpuRatio);
+            while (System.currentTimeMillis() - start <= cpuTime) {} // 模拟CPU执行
+            Thread.sleep(timeout - cpuTime); // 模拟IO执行
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // 测试
+    public static void main(String[] args) {
+        // cnt: 任务数 timeout: 超时时间
+        int cnt = 1000, timeout = 500;
+        var start = System.currentTimeMillis();
+        double cpuRatio = 0.5;
+
+        // 虚拟线程池
+        CompletableFuture.allOf(
+                randomIoTasks(
+                        Executors.newVirtualThreadPerTaskExecutor(),
+                        cnt,
+                        timeout,
+                        cpuRatio
+                )
+        ).join();
+
+        System.out.println("virtual thread => " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+
+        // 固定线程池
+        CompletableFuture.allOf(
+                randomIoTasks(
+                        Executors.newFixedThreadPool(100),
+                        cnt,
+                        timeout,
+                        cpuRatio)
+        ).join();
+
+        System.out.println("normal thread => " + (System.currentTimeMillis() - start));
+    }
+```
+在这次测试代码中我们加入了 CPU占比参数以达到我们动态调整的目的
+![测试3](https://www.vicizxs.fun/api/static/virtual/test_3.png)
+![测试4](https://www.vicizxs.fun/api/static/virtual/test_4.png)
+![测试5](https://www.vicizxs.fun/api/static/virtual/test_5.png)
+
+根据上面的测试结果我们发现，随着CPU的占比不断扩大，虚拟线程的优势逐渐降低。我们从数据可以小猜一手当**比例为1时两者相等**
+
+![测试6](https://www.vicizxs.fun/api/static/virtual/test_6.png)
+![测试7](https://www.vicizxs.fun/api/static/virtual/test_7.png)
+
+最后这里，虚拟线程**大幅落后**，这个比值才来到0.5，时间差距却是如此之大，看来我的猜测是失败了。
+
+### 测试结果梳理
+一开始考虑的是CPU0，也就是IO无限大的情况，但是实际中存在一些问题。
+- 一次IO操作无法覆盖所有CPU操作，一旦无法覆盖就会出现倍数增长
+- 基于上一条，我们一直没有考虑虚拟线程其实也是池化的，那么他也有核心线程的概念，绑定的数量范围目前是未知的
+
+第一个问题是显而易见的，在基本的推测中，我们已经预想到了CPU占比的提高，虚拟线程的优势急剧降低。
+
+所以引发后续测试性能差距的原因就是第二点了，我舍弃池子直接运行。
+```java
+        List<Thread> threadList = IntStream.range(0, cnt).mapToObj(i -> Thread.startVirtualThread(() -> task(timeout, cpuRatio))).collect(Collectors.toList());
+        for (Thread thread : threadList) {
+            thread.join();
+        }
+```
+![测试8](https://www.vicizxs.fun/api/static/virtual/test_8.png)
+好的，很好，执行时间一样，并且出现了有意思的一幕，他们的线程输出格式都是VirtualThread\[#**]/runnable@ForkJoinPool-1-worker-\**，那这里是不是说明虚拟线程本身就是池化的！
+而且ForkJoinPool也很熟悉。
+
+### ForkJoinPool
+ForkJoinPool 是 Fork/Join 框架的一个具体实现，用于并行执行任务。
+
+Fork/Join 框架是 Java 中用于并行处理任务的一种机制，其核心思想是分治。在 Fork/Join 框架中，任务被划分为更小的子任务，并行地执行这些子任务，然后将结果合并以得到最终结果。该框架适用于大规模数据的并行处理和计算密集型任务。
+- **fork**: 将一个大的问题划分成若干个较小的子问题。这个划分过程通常是递归进行的。每个子问题可以独立地进行计算，并且在计算完成后可以得到部分解。需要注意的是，子问题的大小应该适中，不宜过大也不宜过小，以充分利用并行计算的性能优势。
+- **join**: 将这些分解的子问题组织起来，得到完整的解。在并行计算中，当某个子问题的计算完成后，需要等待其所有子问题的计算完成，然后才能进行结果的合并。join 操作就是等待子问题的计算完成，并将其结果合并的过程。
+
+#### 工作窃取
+与传统池子不同，ForkJoinPool的每个线程都有自己的工作队列，而池子做的事情是提供灵活的任务分配策略。
+
+而所谓的工作窃取是 当前线程的Task已经全被执行完毕，则自动取到其他线程(当前线程池)的Task队列中取出Task继续执行。这种机制避免了线程空闲和任务堆积的情况，提高整个框架的性能。
+
+#### 回到上面的问题
+
+```java
+    public ForkJoinPool() {
+        this(Math.min(MAX_CAP, Runtime.getRuntime().availableProcessors()),
+             defaultForkJoinWorkerThreadFactory, null, false,
+             0, MAX_CAP, 1, null, DEFAULT_KEEPALIVE, TimeUnit.MILLISECONDS);
+    }
+
+    public ForkJoinPool(int parallelism) {
+        this(parallelism, defaultForkJoinWorkerThreadFactory, null, false,
+             0, MAX_CAP, 1, null, DEFAULT_KEEPALIVE, TimeUnit.MILLISECONDS);
+    }
+```
+根据ForkJoinPool的构造方法，可以推断出虚拟线程池实际绑定线程的核心数量是当前系统的线程数，通常来说这个值是比较小的。所以到这里，我们就可以给出结论，虚拟线程适合处理IO密集型的任务。
+
+## 虚拟线程和异步思想
+最近看到了部分逆天言论。。。虚拟线程要出来了，异步不用掌握了。。。逆天！！！
+
+### 虚拟线程的优势
+- **轻量级资源**：虚拟线程相比传统线程更加轻量，可以大幅减少线程切换的开销，提高并发处理能力。
+- **高效的IO密集型任务处理**：对于IO密集型任务，虚拟线程能够更高效地利用系统资源，通过少量的线程处理大量的并发IO操作。
+- **简化的并发模型**：虚拟线程简化了并发编程的模型，使得开发者更容易编写并发代码，减少了锁和同步的需求。
+
+### 异步编程思想
+异步编程是一种基于事件驱动的编程模型，它强调非阻塞和并发处理，有助于提高系统的响应速度和吞吐量。
+- **非阻塞操作**：异步编程避免了线程阻塞，提高了系统资源的利用率，能够更好地处理大量的并发请求。
+
+- **事件驱动**：异步编程基于事件驱动的模型，响应外部事件的发生并触发相应的处理逻辑，使得系统更加灵活和高效。
+
+- **并发处理**：异步编程能够更好地利用系统资源，实现并发处理，提高系统的并发能力和性能。
+
+- **任务调度**：异步编程需要良好的任务调度机制，以确保任务能够按照预期的顺序执行，避免出现竞争和阻塞。
+
+### 总结
+在我看来，这俩是可以相互融合的。虚拟线程的引入简化了异步编程的实现方式，但仍需要保持对异步编程思想的理解和应用。在使用虚拟线程时，仍然需要考虑如何设计非阻塞的操作、如何基于事件驱动来处理任务、如何实现并发处理以及如何进行有效的任务调度。只有充分结合虚拟线程和异步编程思想，才能最大限度地发挥并发编程的优势，提高系统的性能和可伸缩性。

@@ -1,0 +1,73 @@
+---
+sidebar_position: 1
+title: 简单工厂模式
+sidebar_label: 简单工厂模式
+---
+
+## 基本概念
+简单工厂模式是一种类的创建型设计模式，也称为静态工厂方法（Static Factory Method）模式。它通过一个工厂对象来决定创建出哪一种产品类的实例，并在创建对象时不向客户暴露内部细节，提供一个通用的创建对象接口。
+
+## 结构
+简单工厂模式包括以下主要角色：
+- **Product（产品接口）**：定义了所创建对象的接口，客户端通过该接口与具体产品进行交互。
+- **ConcreteProduct（具体产品）**：实现了产品接口，是简单工厂模式创建的目标对象。
+- **SimpleFactory（简单工厂类）**：包含了实例化对象的逻辑，根据客户端的要求创建相应的具体产品对象。
+
+## 案例
+下面是一个简单工厂模式的示例，模拟根据不同类型创建不同产品的场景。
+```java
+// 产品接口
+public interface Product {
+    // 定义产品接口方法
+}
+
+// 具体产品1
+public class ConcreteProduct1 implements Product {
+    // 实现产品接口方法
+}
+
+// 具体产品2
+public class ConcreteProduct2 implements Product {
+    // 实现产品接口方法
+}
+
+// 简单工厂类
+public class SimpleFactory {
+    // 创建产品的方法
+    public Product createProduct(int type) {
+        if (type == 1) {
+            return new ConcreteProduct1();
+        } else if (type == 2) {
+            return new ConcreteProduct2();
+        }
+        // 默认返回一个通用的产品
+        return new ConcreteProduct();
+    }
+}
+
+// 客户端代码
+public class Client {
+    public static void main(String[] args) {
+        SimpleFactory factory = new SimpleFactory();
+
+        // 创建具体产品1
+        Product product1 = factory.createProduct(1);
+
+        // 创建具体产品2
+        Product product2 = factory.createProduct(2);
+
+        // 使用产品...
+    }
+}
+```
+
+## 总结
+### 优点
+- 解耦客户端和具体产品类： 客户端无需知道具体产品的实现细节，只需通过简单工厂来创建所需的产品，从而实现了对象的创建和使用解耦。
+- 简化客户端代码： 客户端只需要调用简单工厂的接口来创建产品，无需关心具体的创建细节，从而简化了客户端代码的复杂度。
+- 集中管理创建逻辑： 将对象的创建逻辑集中在工厂类中，便于统一管理和维护，有利于代码的维护和扩展。
+### 缺点
+- 违反开闭原则： 当系统需要新增产品类型时，必须修改工厂类的代码，添加相应的创建逻辑，这违反了开闭原则，即对修改关闭、对扩展开放的设计原则。
+- 工厂类职责过重： 简单工厂模式的工厂类负责创建所有产品类型，随着产品类型的增加，工厂类的职责会越来越重，导致代码膨胀和维护困难。
+
+综上所述，简单工厂模式在一定程度上简化了对象的创建和使用，但在面对产品类型频繁变化或数量庞大的情况下，容易导致工厂类的修改，从而违反了开闭原则。因此，在使用简单工厂模式时，需要权衡利弊，根据实际情况进行选择。

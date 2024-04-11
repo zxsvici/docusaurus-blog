@@ -1,0 +1,268 @@
+---
+sidebar_position: 1
+title: 二叉树
+sidebar_label: 二叉树
+---
+
+## 常见的数据结构
+### 数组
+- 存储在连续的内存空间，元素存储的值就是数据本身，创建开销小
+- 因为是连续的内存空间，所以可以通过下标来直接获取元素，查询效率高， O(1)
+- 因为是连续的内存空间，所以在进行插入和删除时影响的元素较多，增删效率较低，O(1-n)
+### 链表
+- 不需要连续的内存空间，元素存储的值为数据本身和指针（用于指向相邻节点，单链表有一个指针指向下一个节点，双链表有两个分别指向前后节点）
+- 查询元素时，必须从头部节点出发查询，所以查询效率较低，O(1-n)
+- 因为指针的存在，所以插入、删除影响的元素只有1、2个，效率很高 O(1)
+双向链表相较于单链表在不太影响插入、删除效率的基础上提高了查询效率。
+### 树
+- 和双链表一样，每个节点有两个指针，分别指向左右子节点
+- 因为树是层级结构，相较于数组插入、删除时的影响的元素较少，所以插入、删除效率比数组高
+- 因为树是层级结构，相较于链表查询访问的深度从长度变成了树的高度，减少了查询的次数，提高了查询的效率
+![树](http://zxsvici.fun/img/stru/tree_1.jpg)
+## 常见的树的方法
+- void preOrder(root) 前序遍历（递归+迭代）
+- - 前序遍历：中 --> 左 --> 右
+- - 迭代思路：将根节点放入栈中，遍历左子树进栈出栈，在将右节点入栈，重复。
+- - 1. 当前节点不为空，入栈，左子树入栈，出栈（输出）。
+- - 2. 右节点入栈，重复上一步。
+- - 3. 结束条件，栈空。
+- void inOrder(root)  中序遍历（递归+迭代）
+- - 中序遍历：左 --> 中 --> 右
+- - 迭代思路：和前序相同，出栈条件不同
+- void postOrder(root) 后续遍历 (递归+迭代)
+- - 后序遍历：左 --> 右 --> 中
+- - 迭代思路：由于遍历顺序，可确定是将前序遍历的入栈顺序调整一下，又由于确定是子节点访问后才访问父节点，所以访问逻辑为无子节点、或子节点已全部被访问过。
+- - 1. 节点入栈
+- - 2. 根据条件选择出栈还是继续入栈
+- - 3. 结束条件：栈空。
+- void levelOrder(root) 层序遍历
+- - 层序遍历：按照深度打印
+- int getHeight(root) 获取高度，后续用于平衡判断
+- int getSize(root) 获取节点数量
+- boolean contains(obj,root) 查看是否包含
+## 代码示例
+```java title="TreeUtil.java"
+package com.zxs.structure.tree;
+
+import com.zxs.entity.User;
+
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Stack;
+
+/**
+ * @author 策君丶
+ * @note 自定义树的工具类
+ * @create_date 2021-10-16  16:21:09
+ * @Message
+ */
+public class TreeUtil {
+
+    /**
+     * 前序遍历  递归
+     * @param root
+     */
+    public static void preOrder(Node root){
+        if(root != null){
+            syso(root);
+            preOrder(root.left);
+            preOrder(root.right);
+        }
+    }
+
+    /**
+     * 前序遍历  迭代
+     * @param root
+     */
+    public static void preOrderIterate(Node root){
+        if(root == null){
+            return;
+        }
+        Stack<Node> stack = new Stack<>();
+        Node node = root;
+        while (!stack.isEmpty() || node != null){
+            while(node != null){
+                stack.push(node);
+                syso(node);
+                node = node.left;
+            }
+            node = stack.pop();
+            node = node.right;
+        }
+    }
+
+    /**
+     * 中序遍历  递归
+     * @param root
+     */
+    public static void inOrder(Node root){
+        if(root != null){
+            inOrder(root.left);
+            syso(root);
+            inOrder(root.right);
+        }
+    }
+
+    /**
+     * 中序遍历  迭代
+     * @param root
+     */
+    public static void inOrderIterate(Node root){
+        if(root == null){
+            return;
+        }
+        Stack<Node> stack = new Stack<>();
+        Node node = root;
+        while (!stack.isEmpty() || node != null){
+            while(node != null){
+                stack.push(node);
+                node = node.left;
+            }
+            node = stack.pop();
+            syso(node);
+            node = node.right;
+        }
+    }
+
+    /**
+     * 后序遍历  迭代
+     * @param root
+     */
+    public static void postOrder(Node root){
+        if(root == null){
+            return;
+        }
+        postOrder(root.left);
+        postOrder(root.right);
+        syso(root);
+    }
+
+    /**
+     * 后续遍历  迭代
+     * @param root
+     */
+    public static void postOrderIterate2(Node root){
+        if(root == null){
+            return;
+        }
+        Stack<Node> stack1 = new Stack<>();
+        Stack<Node> stack2 = new Stack<>();
+        Node node = null;
+        stack1.push(root);
+        while(!stack1.isEmpty()){
+            node = stack1.pop();
+            stack2.push(node);
+            if(node.left != null){
+                stack1.push(node.left);
+            }
+            if(node.right != null){
+                stack1.push(node.right);
+            }
+        }
+        while (!stack2.isEmpty()){
+            syso(stack2.pop());
+        }
+    }
+
+    /**
+     * 后序遍历  迭代
+     * @param root
+     */
+    public static void postOrderIterate(Node root){
+        if(root == null){
+            return;
+        }
+        Stack<Node> stack = new Stack<>();
+        Node node = null;
+        Node temp = null;
+        stack.push(root);
+        while(!stack.isEmpty()){
+            node = stack.peek();
+            if((node.left == null && node.right == null)  || (temp != null) && (temp == node.left || temp == node.right)){
+                syso(node);
+                stack.pop();
+                temp = node;
+            }else {
+                if(node.right != null){
+                    stack.push(node.right);
+                }
+                if(node.left != null){
+                    stack.push(node.left);
+                }
+            }
+        }
+    }
+
+    /**
+     * 层序遍历
+     * @param root
+     */
+    public static void levelOrder(Node root){
+        if(root == null){
+            return;
+        }
+        Queue<Node> queue = new LinkedList<>();
+        queue.add(root);
+        Node node = null;
+        while (!queue.isEmpty()){
+            node = queue.poll();
+            syso(node);
+            if(node.left != null){
+                queue.add(node.left);
+            }
+            if(node.right != null){
+                queue.add(node.right);
+            }
+        }
+    }
+
+    /**
+     * 获取树的高度
+     * @param root
+     * @return
+     */
+    public static int getHeight(Node root){
+        if(root == null){
+            return 0;
+        }
+        return 1 + Math.max(getHeight(root.left),getHeight(root.right));
+    }
+
+    /**
+     * 获取树的节点数量
+     * @param root
+     * @return
+     */
+    public static int getSize(Node root){
+        if(root == null){
+            return 0;
+        }
+        return 1 + getSize(root.left) + getSize(root.right);
+    }
+
+
+    /**
+     * 树是否包含该值
+     * @param object
+     * @param root
+     * @return
+     */
+    public static boolean contains(Object object, Node root){
+        if(root == null){
+            return false;
+        }
+        if(object.equals(root.value)){
+            return true;
+        }
+        return contains(object,root.left) || contains(object,root.right);
+    }
+
+    /**
+     * 输出语句，科学偷懒
+     * @param node
+     */
+    private static void syso(Node node){
+        System.out.print(node.value + " ");
+    }
+}
+```
