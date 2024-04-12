@@ -1,0 +1,96 @@
+---
+sidebar_position: 1
+title: 部署
+sidebar_label: 部署
+---
+
+## 前提需求
+- 网络互通
+- 访问外网
+- 禁止swap分区
+
+## 环境初始化
+```shell
+# 关闭防火墙
+systemctl stop firewalld
+systemctl disable firewalld
+
+# 关闭selinux
+sed -i 's/enforcing/disabled/' /etc/selinux/config  # 永久
+setenforce 0  # 临时
+
+# 关闭swap
+swapoff -a  # 临时
+vim /etc/fstab  # 永久
+
+# 设置主机
+hostnamectl set-hostname <hostname>
+
+# 胡同
+cat >> /etc/hosts << EOF
+xxx.xxx.xxx.xxx(master_ip) k8s-master
+xxx.xxx.xxx.xxx(node1_ip) k8s-node1
+xxx.xxx.xxx.xxx(node2_ip) k8s-node2
+EOF
+
+cat > /etc/sysctl.d/k8s.conf << EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system  # 生效
+
+# 时间同步：
+yum install ntpdate -y
+ntpdate time.windows.com
+
+
+```
+## 安装docker
+[docker安装](https://www.runoob.com/docker/centos-docker-install.html)
+
+## 安装kubectl
+```shell
+yum install -y kubelet-1.18.0 kubeadm-1.18.0 kubectl-1.18.0
+systemctl enable kubelet
+```
+
+### master配置
+```shell
+kubeadm init \
+  --apiserver-advertise-address=xxx.xxx.xxx.xxx(master_ip) \
+  --image-repository registry.aliyuncs.com/google_containers \
+  --kubernetes-version v1.18.0 \
+  --service-cidr=10.92.0.0/12 \
+  --pod-network-cidr=10.220.0.0/16 \
+  --ignore-preflight-errors=all
+```
+该命令会输出一个token，用于node加入集群。
+示例输出：
+```shell
+kubeadm join xxx.xxx.xxx.xxx:6443 --token wx4uwc.gifmauseb2i64j17 \
+    --discovery-token-ca-cert-hash sha256:8d8eb8a6da31472fb64b0b7d05134017e450fbc276bf12b1b51c352c3c1384c1
+```
+
+## 配置集群通信文件
+```shell
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+### node配置
+```shell
+kubeadm join xxx.xxx.xxx.xxx:6443 --token <token> \
+  --discovery-token-ca-cert-hash sha256:<hash>
+```
+
+### 部署网络插件
+```shell
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+或者直接使用我的
+[calico.yaml](https://www.vicizxs.fun/api/static/calico.yaml)
+### 验证集群状态
+```shell
+kubectl get nodes
+```
