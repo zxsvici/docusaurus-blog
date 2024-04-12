@@ -138,21 +138,46 @@ if [ -z "$previous_commit" ] || [ "$current_commit" != "$previous_commit" ]; the
   # 记录和更新
   echo "$(date '+%Y-%m-%d %H:%M:%S') - Ran npm run build" >> task.log
   echo "$current_commit" > .previous_commit
-
-  # 邮件收件人地址
-  recipient="your@email.com"
-  # 邮件主题
-  subject="rebuild error"
-  # 邮件内容
-  body="sb, rebuild error.msg is \n${cat "$blog_rebuild_log"}"
-
-  # 使用 mail 命令发送邮件
-  echo -e "$body" | mail -s "$subject" "$recipient"
+  # 发送邮件4
 else
   echo "Versions are the same"
 fi
 ```
 
+node18需要centos8或者centos7.x重新编译，否则会无法运行,我编译失败了，选择使用镜像
+```shell
+#!/bin/bash
+
+git_repo_path="/path/blog"
+
+cd "$git_repo_path"
+
+git pull
+
+# 获取当前commit版本
+current_commit=$(git rev-parse HEAD)
+#echo "current_commit=$current_commit"
+
+# 获取上次打包commit版本
+previous_commit=$(cat .previous_commit 2>/dev/null)
+#echo "previous_commit=$previous_commit"
+
+# 不同则构建，相同则跳过
+if [ -z "$previous_commit" ] || [ "$current_commit" != "$previous_commit" ]; then
+  kubectl cp $git_repo_path node18-deployment-59d6f7dc4b-6n258:/opt/docusaurus-blog
+  kubectl exec -it node18-deployment-59d6f7dc4b-6n258 -- sh -c 'cd /opt/docusaurus-blog && npm i --cache /opt/npm_pkg && npm run build'
+  kubectl cp node18-deployment-59d6f7dc4b-6n258:/opt/docusaurus-blog/build $git_repo_path/../build
+  kubectl exec -it node18-deployment-59d6f7dc4b-6n258 -- rm -rf /opt/docusaurus-blog
+  # 记录和更新
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - Ran npm run build ${current_commit}" >> /usr/local/test/task.log
+  echo "$current_commit" > .previous_commit
+
+  mv /opt/blog/front/static/build /opt/blog/front/static/build-bak
+  mv $git_repo_path/../build /opt/blog/front/static/build
+else
+  echo "Versions are the same"
+fi
+```
 配置定时器
 ```shell
 crontab -e
