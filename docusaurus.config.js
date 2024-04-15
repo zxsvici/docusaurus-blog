@@ -121,6 +121,7 @@ const config = {
                     //     ],
                     // },
                     // {to: '/blog', label: 'Blog', position: 'left'},
+                    {to: '/docs/study-note/server/java', label: 'Java', position: 'left'},
                 ],
             },
             footer: {

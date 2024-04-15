@@ -1,0 +1,232 @@
+---
+sidebar_position: 1
+title: 普罗米修斯
+sidebar_label: 普罗米修斯
+---
+
+## 概述
+
+普罗米修斯是 Prometheus 的开源监控和报警系统。它是一个开源的服务监控系统和时间序列数据库。
+
+
+## 架构
+
+普罗米修斯由以下组件构成：
+
+- Prometheus Server：Prometheus 服务器负责抓取度量数据，存储时间序列数据，并提供查询 API。
+- Push Gateway：Push Gateway 是一个简单的网关，它接收被抓取的度量数据并将其转发到 Prometheus Server。
+- Exporters：Exporters 是 Prometheus 客户端，它们运行在被监控的目标上，并将度量数据暴露给 Prometheus Server。
+- Alertmanager：Alertmanager 是一个可选组件，它负责管理告警规则和通知。
+- Web UI：Prometheus Web UI 提供了一个图形化的界面，用于查询和可视化 Prometheus 数据。
+- CLI：Prometheus CLI 提供了一个命令行界面，用于与 Prometheus 服务器交互。
+- TSDB：Prometheus 使用一个时间序列数据库来存储时间序列数据。
+
+
+## 时序数据库
+
+它是一个基于磁盘的、可持久化的、键值对存储。
+
+### 主要组件
+
+- Head：Head 是一个持久化的、可排序的、可搜索的、可压缩的、基于磁盘的、键值对存储。
+- WAL（Write-Ahead Log）：WAL 是一个事务日志，它记录了对 Head 的所有写入操作。
+- Querier：Querier 是 Prometheus 的查询引擎，它接收查询请求并从 Head 中检索数据。
+- Compactor：Compactor 是一个后台进程，它定期对 Head 进行压缩，以减少磁盘占用。
+
+### 数据类型
+
+- 指标（Metric）：指标是 Prometheus 用来度量系统行为的基本数据类型。
+- 标签（Label）：标签是指标的附加属性，它可以用来对指标进行分类和过滤。
+- 时间戳（Timestamp）：时间戳是指标的观察时间。
+- 样本（Sample）：样本是指标的一个特定观察值，它由标签和时间戳组成。
+
+## 规则
+
+规则是 Prometheus 的核心组件之一。它定义了 Prometheus 监控的规则，并将它们转换为告警。
+
+规则由两部分组成：
+
+- 条件（Condition）：条件是规则的触发条件。
+- 动作（Action）：动作是规则的执行动作。
+
+```yaml
+groups:
+- name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    for: 10m
+    labels:
+      severity: page
+    annotations:
+      summary: High request latency
+```
+
+- `name`：规则组的名称。
+- `rules`：包含规则的列表。
+- `alert`：告警名称。
+- `expr`：表达式也就是查询语句，用于计算告警条件
+- `for`：告警持续时间。
+- `labels`：告警的标签。
+- `annotations`：告警的注释。
+
+## 配合 Alertmanager 使用
+
+Prometheus 可以与 Alertmanager 配合使用，用于管理告警规则和通知。
+
+Alertmanager 是一个可选组件，它负责管理告警规则和通知。
+
+### 配置
+
+Alertmanager 的配置包括两个部分：
+
+- 全局配置：全局配置包含与所有接收器相关的配置，如 SMTP 服务器地址、电子邮件主题等。
+- 路由配置：路由配置包含告警规则，用于将告警路由到相应的接收器。
+
+```yaml
+global:
+  smtp_smarthost: 'localhost:25'  # SMTP 服务器地址
+  smtp_from: 'alertmanager@localhost'  # 电子邮件主题
+  smtp_auth_username: 'testuser'  # SMTP 用户名
+  smtp_auth_password: 'testpassword'  # SMTP 密码
+  smtp_require_tls: false  # 是否需要 TLS 加密
+
+route:
+  group_by: ['alertname']  # 按告警名称分组
+  group_wait: 30s   # 等待时间
+  group_interval: 5m  # 间隔时间
+  repeat_interval: 1h  # 重复间隔
+  receiver: 'web.hook'  # 接收器名称
+
+receivers:
+- name: 'web.hook'  # 接收器名称
+  webhook_configs:   # 告警通知配置
+  - url: 'http://127.0.0.1:5000/alert'  # 告警通知 URL
+- name: 'email'  # 接收器名称
+  email_configs:   # 电子邮件通知配置
+  - to: 'test@localhost'  # 接收者邮箱
+    from: 'alertmanager@localhost'  # 发送者邮箱
+    smarthost: 'localhost:25'  # SMTP 服务器地址
+    auth_username: 'testuser'  # SMTP 用户名
+    auth_password: 'testpassword'  # SMTP 密码
+    require_tls: false  # 是否需要 TLS 加密
+```
+
+## 配合 Grafana 使用
+
+Prometheus 可以与 Grafana 配合使用，用于可视化 Prometheus 数据。
+
+Grafana 是一个开源的可视化工具，它可以与 Prometheus 配合使用，用于可视化 Prometheus 数据。
+
+
+### 配置
+
+Grafana 的配置包括两个部分：
+
+- 数据源：数据源配置包含 Prometheus 的 URL 和 API 密钥。
+- 仪表盘：仪表盘配置包含仪表盘的名称、数据源、查询语句、时间范围、布局等。
+
+```yaml
+apiVersion: 1
+
+datasources:
+- name: Prometheus
+  type: prometheus
+  access: proxy
+  url: http://localhost:9090
+  isDefault: true
+
+  jsonData:
+    httpMethod: POST
+    timeInterval: 5s
+
+dashboards:
+- name: Prometheus # 仪表盘名称
+  dashboard: # 仪表盘配置
+    rows:
+    - title: Prometheus
+      panels:
+      - title: Prometheus
+        type: graph
+        dataSource: Prometheus
+        targets:
+        - expr: up{job="prometheus"}
+          legendFormat: up
+          refId: A
+        - expr: process_virtual_memory_bytes{job="prometheus"}
+          legendFormat: virtual memory
+          refId: B
+        - expr: process_resident_memory_bytes{job="prometheus"}
+          legendFormat: resident memory
+          refId: C
+        # ... more panels
+```
+
+## 脚本热启动
+### 使用shell脚本实现告警规则的动态刷新
+```shell
+#!/bin/bash
+
+while true
+do
+    # 刷新告警规则
+    curl -X POST http://localhost:9090/-/reload
+
+    # 等待5分钟
+    sleep 300
+done
+```
+
+### 使用shell脚本动态刷新告警人员名单
+```shell
+#!/bin/bash
+
+
+# 定义告警人员名单
+alert_persons="person1 person2 person3"
+
+# 刷新告警人员名单
+curl -X POST -H "Content-Type: application/json" -d '{"alert_persons": "'"$alert_persons"'"}' http://localhost:9090/api/v1/alertmanager/config
+
+
+while true
+do
+    # 刷新告警规则
+    curl -X POST http://localhost:9090/-/reload
+
+    # 等待5分钟
+    sleep 300
+done
+```
+
+## 结合thanos实现数据可靠性
+
+Prometheus 是一个开源的监控系统，它可以抓取、存储和查询度量数据。但是，Prometheus 单点故障问题一直是个难题。为了解决这个问题，Prometheus 社区提出了 Thanos 项目，它是一个开源的 Prometheus 联合集群方案。
+
+Thanos 项目由以下组件构成：
+
+- Prometheus：Prometheus 负责抓取、存储和查询度量数据。
+- Querier：Querier 是 Prometheus 的查询引擎，它接收查询请求并从多个 Prometheus 实例中检索数据。
+- Store Gateway：Store Gateway 是 Thanos 的数据存储组件，它接收来自 Prometheus 的数据并将其存储在对象存储中。
+- Compactor：Compactor 是一个后台进程，它定期对 Store Gateway 中的数据进行压缩，以减少磁盘占用。
+- Object Storage：对象存储是 Thanos 的数据存储组件，它用于存储 Prometheus 产生的数据。
+
+Thanos 架构如下图所示：
+
+![Thanos架构图](https://prometheus.io/assets/thanos/thanos-architecture.png)
+
+### 架构特点
+
+- 高可用性：Thanos 集群由多个组件组成，可以保证高可用性。
+- 弹性伸缩：Prometheus 集群可以随时增加或减少节点，而 Thanos 集群可以自动扩展。
+- 数据可靠性：Thanos 集群使用对象存储来存储数据，可以保证数据可靠性。
+- 降级查询：Thanos 集群支持降级查询，可以查询旧数据。
+- 实时查询：Thanos 集群支持实时查询，可以查询最新数据。
+
+## 参考
+
+- [Prometheus 官方文档](https://prometheus.io/docs/introduction/overview/)
+- [Prometheus 官方中文文档](https://prometheus.io/docs/prometheus/latest/zh_cn/)
+- [Alertmanager 官方文档](https://prometheus.io/docs/alerting/latest/alertmanager/)
+- [Grafana 官方文档](https://grafana.com/docs/grafana/latest/datasources/prometheus/)
+- [Thanos 官方文档](https://thanos.io/tip/thanos/quick-tutorial.md/)

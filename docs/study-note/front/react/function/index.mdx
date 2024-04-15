@@ -1,0 +1,475 @@
+---
+sidebar_position: 1
+title: 基础函数接口
+sidebar_label: 基础函数接口
+---
+
+## mdx不支持ts，所以类型就不去纠结了
+
+React 中有一些基础的Hook，可以帮助我们简单的开发。
+
+## useState
+
+useState 是一个函数，它可以用来在函数组件中存储和更新状态。
+
+```jsx
+import { useState } from 'react';
+
+const UseStateExample = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>UseStateExample 点击了 {count} 次</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  );
+}
+```
+
+import {useState, useEffect, useContext, createContext, useCallback, useRef, useMemo, useReducer} from 'react';
+
+export const UseStateExample = () => {
+    const [count, setCount] = useState(0);
+
+    return (
+        <div>
+            <p>UseStateExample 点击了 {count} 次</p>
+            <button onClick={() => setCount(count + 1)}>
+                Click me
+            </button>
+        </div>
+    );
+}
+
+<UseStateExample/>
+
+
+useState 返回一个 [get, set]数组
+
+## useEffect
+
+useEffect 是一个函数，接收两个参数，第一个参数是一个函数，第二个参数是一个数组，数组里的变量变化时才会执行 useEffect。它可以用来在函数组件中执行副作用操作，比如获取数据、设置定时器、订阅事件等。
+
+```jsx
+
+useEffect(() => {
+  // TODO
+}, [/** 监听的变量 */]);
+
+import { useEffect } from 'react';
+import { useState } from 'react';
+
+const UseEffectExample = () => {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+        console.log('useEffect');
+    }, []); // 空数组表示 useEffect 只在组件挂载时执行一次，后面数组里的变量变化时才会执行
+    useEffect(() => {
+        console.log(`UseEffectExample state changed, now count: ${count}`);
+    }, [count]); // 只有 count 变化时才会执行 useEffect
+
+    return (
+        <div>
+            <p>UseEffectExample 点击了 {count} 次</p>
+            <button onClick={() => setCount(count + 1)}>
+                Click me
+            </button>
+        </div>
+    );
+}
+```
+
+export const UseEffectExample = () => {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+        console.log('useEffect');
+    }, []); // 空数组表示 useEffect 只在组件挂载时执行一次，后面数组里的变量变化时才会执行
+    useEffect(() => {
+        console.log(`UseEffectExample state changed, now count: ${count}`);
+    }, [count]); // 只有 count 变化时才会执行 useEffect
+
+    return (
+        <div>
+            <p>UseEffectExample点击了 {count} 次</p>
+            <button onClick={() => setCount(count + 1)}>
+                Click me
+            </button>
+        </div>
+    );
+}
+
+<UseEffectExample/>
+
+## useContext
+
+useContext 是一个函数，它可以用来在函数组件中获取上下文。
+
+### 余额上下文
+
+```jsx
+import { createContext, useState } from 'react';
+
+const BalanceContext = createContext({
+  balance: 0,
+  addBalance: () => {}
+});
+
+
+const BalanceProvider = ({ children }) => {
+  const [balance, setBalance] = useState(0);
+
+  const addBalance = (amount) => {
+    setBalance(balance + amount);
+  };
+
+  return (
+    <BalanceContext.Provider value={{ balance, addBalance }}>
+      {children}
+    </BalanceContext.Provider>
+  );
+};
+```
+
+### 余额实时显示组件
+
+```jsx
+import { useContext } from 'react';
+
+const BalanceDisplay = () => {
+  const { balance } = useContext(BalanceContext);
+
+  return (
+    <div>
+      <p>余额: {balance}</p>
+    </div>
+  );
+};
+```
+
+### 花费余额组件
+给一个输入框，输入金额，点击按钮，将金额花费掉。
+
+```jsx
+import { useContext } from 'react';
+
+const SpendBalance = () => {
+    const {balance, addBalance} = useContext(BalanceContext);
+    const [amount, setAmount] = useState(0);
+
+    const handleSpend = (event) => {
+        addBalance(-amount);
+    };
+
+    return (
+        <div>
+            <input type="number" onChange={(event) => setAmount(parseInt(event.target.value))}/>
+            <button onClick={handleSpend}>花费</button>
+        </div>
+    );
+};
+```
+
+### 合并组件
+
+```jsx
+
+const UseContextExample = () => {
+  return (
+    <BalanceProvider> // 组件树里只能有一个 BalanceProvider
+      <BalanceDisplay /> // 显示余额
+      <SpendBalance /> // 花费余额
+    </BalanceProvider>
+  );
+};
+```
+
+export const BalanceContext = createContext({
+    balance: 0,
+    addBalance: () => {
+    }
+});
+
+export const BalanceProvider = ({children}) => {
+    const [balance, setBalance] = useState(0);
+
+    const addBalance = (amount) => {
+        setBalance(balance + amount);
+    };
+
+    return (
+        <BalanceContext.Provider value={{balance, addBalance}}>
+            {children}
+        </BalanceContext.Provider>
+    );
+};
+
+export const BalanceDisplay = () => {
+    const {balance} = useContext(BalanceContext);
+
+    return (
+        <div>
+            <p>余额: {balance}</p>
+        </div>
+    );
+};
+
+export const SpendBalance = () => {
+    const {balance, addBalance} = useContext(BalanceContext);
+    const [amount, setAmount] = useState(0);
+
+    const handleSpend = (event) => {
+        addBalance(-amount);
+    };
+
+    return (
+        <div>
+            <input type="number" onChange={(event) => setAmount(parseInt(event.target.value))}/>
+            <button onClick={handleSpend}>花费</button>
+        </div>
+    );
+};
+
+export const UseContextExample = () => {
+    return (
+        <BalanceProvider>
+            <BalanceDisplay/>
+            <SpendBalance/>
+        </BalanceProvider>
+    );
+};
+
+<UseContextExample/>
+可以看出，花费和显示没有直接的参数传递，而是通过上下文获取数据和方法。
+
+## useCallBack
+
+useCallback 是一个函数，它可以用来缓存函数，避免重新渲染时重复创建函数。
+
+```jsx
+import { useState, useCallback } from 'react';
+
+const UseCallbackExample = () => {
+  const [count, setCount] = useState(0);
+  const handleClick = useCallback(() => {
+    setCount(count + 1);
+  }, [count]);
+
+  return (
+    <div>
+      <p>UseCallbackExample 点击了 {count} 次</p>
+      <button onClick={handleClick}>
+        Click me
+      </button>
+    </div>
+  );
+}
+```
+
+export const UseCallbackExample = () => {
+    const [count, setCount] = useState(0);
+    const handleClick = useCallback(() => {
+        setCount(count + 1);
+    }, [count]);
+
+    return (
+        <div>
+            <p>UseCallbackExample 点击了 {count} 次</p>
+            <button onClick={handleClick}>
+                Click me
+            </button>
+        </div>
+    );
+}
+
+<UseCallbackExample/>
+
+## useRef
+
+useRef 是一个函数，它可以用来在函数组件中存储一个可变的 ref 对象。
+
+```jsx
+import { useRef } from 'react';
+
+const UseRefExample = () => {
+  const inputRef = useRef(null);
+
+  const handleClick = () => {
+    inputRef.current.focus();
+  };
+
+  return (
+    <div>
+            <input id="input" type="text" ref={inputRef} />
+            <button onClick={handleClick}>
+                跳转输入框
+            </button>
+            <button onClick={() => {
+                inputRef.current.value = 'hello';
+            }}>
+                改变输入框的值
+            </button>
+            <button onClick={() => {
+                inputRef.current = document.createElement('input'); // 不可以为 null。会导致组件挂载失败。
+            }}>
+                解除绑定
+            </button>
+            {/*重新绑定回input*/}
+            <button onClick={() => {
+                inputRef.current = document.getElementById('input');
+            }}>
+                重新绑定
+            </button>
+    </div>
+  );
+}
+```
+
+
+export const UseRefExample = () => {
+    const inputRef = useRef(null);
+
+    const handleClick = () => {
+        inputRef.current.focus();
+    };
+
+    return (
+        <div>
+            <input id="input" type="text" ref={inputRef}/>
+            <button onClick={handleClick}>
+                跳转输入框
+            </button>
+            <button onClick={() => {
+                inputRef.current.value = 'hello';
+            }}>
+                改变输入框的值
+            </button>
+            <button onClick={() => {
+                inputRef.current = document.createElement('input');
+            }}>
+                解除绑定
+            </button>
+            {/*重新绑定回input*/}
+            <button onClick={() => {
+                inputRef.current = document.getElementById('input');
+            }}>
+                重新绑定
+            </button>
+        </div>
+    );
+}
+
+
+<UseRefExample/>
+
+## useMemo
+
+useMemo 是一个函数，它可以用来缓存计算结果，避免重新渲染时重复计算。
+
+```jsx
+import { useState, useMemo } from 'react';
+
+const UseMemoExample = () => {
+  const [count, setCount] = useState(0);
+  const doubleCount = useMemo(() => count * 2, [count]);
+
+  return (
+    <div>
+      <p>UseMemoExample 点击了 {count} 次，双倍数为 {doubleCount}</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  );
+}
+```
+
+export const UseMemoExample = () => {
+    const [count, setCount] = useState(0);
+    const doubleCount = useMemo(() => count * 2, [count]);
+
+    return (
+        <div>
+            <p>UseMemoExample 点击了 {count} 次，双倍数为 {doubleCount}</p>
+            <button onClick={() => setCount(count + 1)}>
+                Click me
+            </button>
+        </div>
+    );
+}
+
+<UseMemoExample/>
+
+
+useMemo 和 useCallback 类似，但是 useMemo 缓存的是计算结果，useCallback 缓存的是函数。
+useMemo 适用于计算量大的情况，useCallback 适用于函数作为 props 传递的情况。
+
+## useReducer
+
+useReducer 是一个函数，它可以用来管理状态，接收 reducer 函数和初始状态作为参数，返回一个 [state, dispatch] 数组。
+
+```jsx
+import { useReducer } from 'react';
+
+const initialState = { count: 0 };
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'increment':
+      return { count: state.count + 1 };
+    case 'decrement':
+      return { count: state.count - 1 };
+    default:
+      throw new Error();
+  }
+};
+
+const UseReducerExample = () => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  return (
+    <div>
+      <p>UseReducerExample 点击了 {state.count} 次</p>
+      <button onClick={() => dispatch({ type: 'increment' })}>
+        +
+      </button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>
+        -
+      </button>
+    </div>
+  );
+}
+```
+
+export const UseReducerExample = () => {
+    const initialState = {count: 0};
+
+    const reducer = (state, action) => {
+        switch (action.type) {
+            case 'increment':
+                return {count: state.count + 1};
+            case 'decrement':
+                return {count: state.count - 1};
+            default:
+                throw new Error();
+        }
+    };
+
+    const [state, dispatch] = useReducer(reducer, initialState);
+
+    return (
+        <div>
+            <p>UseReducerExample 点击了 {state.count} 次</p>
+            <button onClick={() => dispatch({type: 'increment'})}>
+                +
+            </button>
+            <button onClick={() => dispatch({type: 'decrement'})}>
+                -
+            </button>
+        </div>
+    );
+}
+
+<UseReducerExample/>

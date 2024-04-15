@@ -1,0 +1,166 @@
+---
+sidebar_position: 1
+title: 基础知识
+sidebar_label: 基础知识
+---
+
+# 基础知识
+
+## Redis 简介
+
+Redis 是完全开源免费的，遵守BSD协议，是一个高性能的key-value数据库。
+
+Redis支持数据的持久化，可以将内存中的数据保存在磁盘中，重启的时候可以再次加载进行使用。
+
+Redis支持简单的key-value类型，还提供list，set，zset，hash等数据结构的存储。
+
+Redis支持事务，Redis的所有操作都是原子性的，同时Redis还支持不同级别的磁盘持久化，可以将内存中的数据同步到磁盘，可以配置不同的同步策略，比如每次同步、每秒同步、每分钟同步等。
+
+
+
+## Redis 优势
+
+- 性能高：Redis能读的速度是110000次/s,写的速度是81000次/s。
+- 丰富的数据类型：Redis支持五种数据类型：string（字符串），hash（哈希），list（列表），set（集合），zset（有序集合）。
+- 原子性：Redis的所有操作都是原子性的，同时Redis还支持对几个操作全并后的原子性执行。
+- 丰富的特性：Redis支持多种特性，比如发布/订阅，事务，LUA脚本，过期等。
+- 持久化：Redis支持数据的持久化，可以将内存中的数据保存在磁盘中，重启的时候可以再次加载进行使用。
+- 集群：Redis支持主从复制，可以配置多个Redis实例，实现读写分离，提高Redis的可扩展性。
+- 多语言客户端：Redis提供了多种语言的客户端，比如Java，Python，C，PHP，Ruby等。
+
+
+
+## Redis 应用场景
+
+- 缓存：Redis作为一个高性能的内存数据库，可以用来做缓存，提高系统的响应速度。
+- 计数器：Redis可以用作计数器，比如用户的访问次数，商品的销售量等。
+- 排行榜：Redis可以用作排行榜，比如热门商品，高评价商品等。
+- 任务队列：Redis可以用作任务队列，比如秒杀，订单处理等。
+- 发布/订阅：Redis可以用作消息队列，发布订阅系统。
+- 地理位置：Redis可以用作存储地理位置信息，比如用户的位置信息，商品的位置信息等。
+- 实时分析：Redis可以用作实时分析系统，比如实时统计网站的PV，UV，商品的点击量等。
+
+
+
+## Redis 数据结构以及操作指令
+
+### String（字符串）
+
+String类型是Redis最基本的数据类型，一个key对应一个value。String类型是二进制安全的，这意味着Redis的String类型可以包含任何数据，比如jpg图片或者序列化的对象。String类型支持四种操作指令：
+
+- SET key value：设置指定key的值为value。
+- GET key：获取指定key的值。
+- GETRANGE key start end：获取指定key的值的子字符串，从start开始到end结束。
+- GETSET key value：获取指定key的值，并设置新的值。
+
+### Hash（哈希）
+
+Hash类型是一个string类型的field和value的映射表，它是一个String类型key对应一个String类型value的字典。Hash类型支持四种操作指令：
+
+- HSET key field value：设置指定key的field的值为value。
+- HGET key field：获取指定key的field的值。
+- HGETALL key：获取指定key的所有field和value。
+- HDEL key field：删除指定key的field。
+
+### List（列表）
+
+List类型是一个链表，可以存储多个string类型元素。List类型支持四种操作指令：
+
+- LPUSH key value：将一个值value插入到指定key的列表头部。
+- LPOP key：移除并返回指定key的列表头部的值。
+- LRANGE key start end：获取指定key的列表中指定范围的元素。
+- LLEN key：获取指定key的列表长度。
+
+### Set（集合）
+
+Set类型是一个无序集合，集合中的元素是唯一的。Set类型支持四种操作指令：
+
+- SADD key value：向指定key的集合中添加一个元素。
+- SMEMBERS key：获取指定key的集合中的所有元素。
+- SREM key value：从指定key的集合中移除一个元素。
+- SCARD key：获取指定key的集合的元素个数。
+
+### Zset（有序集合）
+
+Zset类型是一个有序集合，集合中的元素是唯一的，且每个元素都有一个score，用于排序。Zset类型支持四种操作指令：
+
+- ZADD key score value：向指定key的有序集合中添加一个元素。
+- ZRANGE key start end [WITHSCORES]：获取指定key的有序集合中指定范围的元素。
+- ZRANGEBYSCORE key min max [WITHSCORES]：获取指定key的有序集合中指定分数范围的元素。
+- ZCARD key：获取指定key的有序集合的元素个数。
+
+### 指令大全
+- DEL key：删除指定key。
+- EXISTS key：判断指定key是否存在。
+- EXPIRE key seconds：设置指定key的过期时间。
+- TTL key：获取指定key的剩余过期时间。
+- RENAME key newkey：重命名指定key。
+- RENAMENX key newkey：仅当newkey不存在时，才重命名指定key。
+- TYPE key：获取指定key的类型。
+- FLUSHALL：清空Redis所有数据。
+- FLUSHDB：清空当前数据库的所有数据。
+- SELECT dbindex：选择数据库。
+- MOVE key dbindex：移动指定key到指定数据库。
+- SAVE：保存数据到磁盘。
+- BGSAVE：后台保存数据到磁盘。
+- LASTSAVE：获取最近一次保存到磁盘的时间。
+- MONITOR：实时监控Redis服务器。
+- INFO：获取Redis服务器信息。
+- SLAVEOF host port：设置Redis服务器为主从服务器。
+- PING：测试Redis服务器是否运行正常。
+- CLIENT LIST：获取Redis服务器的客户端连接信息。
+- CLIENT KILL [ip:port]：杀死Redis服务器的客户端连接。
+- CONFIG GET parameter：获取Redis服务器配置参数。
+- CONFIG SET parameter value：设置Redis服务器配置参数。
+- CONFIG RESETSTAT：重置Redis服务器的统计信息。
+- DEBUG OBJECT key：获取指定key的调试信息。
+- MONITOR：实时监控Redis服务器。
+- SLOWLOG GET [num]：获取Redis服务器慢查询日志。
+- SLOWLOG LEN：获取Redis服务器慢查询日志的长度。
+- SLOWLOG RESET：清空Redis服务器慢查询日志。
+- TIME：获取Redis服务器当前时间。
+- SETNX key value：设置指定key的值，仅当key不存在时才设置。
+- MSET key value [key value ...]：批量设置多个key的值。
+- MGET key [key ...]：批量获取多个key的值。
+- INCR key：将指定key的值加1。
+- INCRBY key increment：将指定key的值加上increment。
+- DECR key：将指定key的值减1。
+- DECRBY key decrement：将指定key的值减去decrement。
+- LPUSH key value [value ...]：将多个值插入到指定key的列表头部。
+- RPUSH key value [value ...]：将多个值插入到指定key的列表尾部。
+- LINDEX key index：获取指定key的列表中指定索引的值。
+- LSET key index value：设置指定key的列表中指定索引的值。
+- LTRIM key start end：截取指定key的列表，只保留指定范围的元素。
+- LINSERT key BEFORE|AFTER pivot value：在指定key的列表中插入一个元素。
+- SISMEMBER key member：判断指定key的集合中是否存在指定元素。
+- SINTER key [key ...]：求多个key的交集。
+- SUNION key [key ...]：求多个key的并集。
+- SDIFF key [key ...]：求多个key的差集。
+- SINTERSTORE destination key [key ...]：求多个key的交集并存储到destination。
+- SUNIONSTORE destination key [key ...]：求多个key的并集并存储到destination。
+- SDIFFSTORE destination key [key ...]：求多个key的差集并存储到destination。
+- ZINCRBY key increment member：将指定key的有序集合中指定元素的score增加increment。
+- ZRANK key member：获取指定key的有序集合中指定元素的排名。
+- ZREVRANK key member：获取指定key的有序集合中指定元素的逆序排名。
+- ZRANGEBYLEX key min max [LIMIT offset count]：获取指定key的有序集合中指定范围的元素。
+- ZREMRANGEBYLEX key min max：删除指定key的有序集合中指定范围的元素。
+- ZREMRANGEBYRANK key start end：删除指定key的有序集合中指定排名范围的元素。
+- ZREMRANGEBYSCORE key min max：删除指定key的有序集合中指定分数范围的元素。
+- ZUNIONSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]：求多个key的并集并存储到destination。
+- ZINTERSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]：求多个key的交集并存储到destination。
+- HINCRBY key field increment：将指定key的哈希表中指定field的值增加increment。
+- HMSET key field value [field value ...]：批量设置多个field的值。
+- HMGET key field [field ...]：批量获取多个field的值。
+- HKEYS key：获取指定key的哈希表中的所有field。
+- HVALS key：获取指定key的哈希表中的所有value。
+- HLEN key：获取指定key的哈希表中的元素个数。
+- HSCAN key cursor [MATCH pattern] [COUNT count]：迭代获取指定key的哈希表中的元素。
+- SCAN cursor [MATCH pattern] [COUNT count]：迭代获取Redis数据库中的元素。
+- WAIT numreplicas timeout：等待至少numreplicas个从服务器的同步。
+- PFADD key element [element ...]：向指定key的HyperLogLog中添加元素。
+- PFCOUNT key [key ...]：获取多个key的HyperLogLog的交集。
+- PFMERGE destkey sourcekey [sourcekey ...]：将多个key的HyperLogLog合并到destkey中。
+- GEOADD key longitude latitude member [longitude latitude member ...]：向指定key的地理位置集合中添加元素。
+- GEODIST key member1 member2 [unit]：获取两个地理位置元素之间的距离。
+- GEOHASH key member [member ...]：获取多个地理位置元素的GeoHash值。
+- GEORADIUS key longitude latitude radius [unit] [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC] [STORE key] [STOREDIST key]：获取指定key的地理位置集合中指定范围内的元素。

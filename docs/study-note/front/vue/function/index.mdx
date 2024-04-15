@@ -1,0 +1,169 @@
+---
+sidebar_position: 1
+title: 常用的hook
+sidebar_label: 常用的hook
+---
+
+vue中常用的一些hook有：
+
+## beforeCreate
+
+在实例初始化之后，数据观测(data observer)和事件配置之前被调用。
+
+```javascript
+export default {
+  beforeCreate() {
+    console.log('beforeCreate');
+  },
+  created() {
+    console.log('created');
+  }
+}
+```
+
+
+## created
+
+在实例创建完成后被调用。
+
+```javascript
+export default {
+  created() {
+    console.log('created');
+  }
+}
+```
+
+## beforeMount
+
+在挂载开始之前被调用。
+
+```javascript
+export default {
+  data() {
+    return {
+      message: 'hello'
+    }
+  },
+  beforeMount() {
+    console.log('beforeMount');
+  },
+  mounted() {
+    console.log('mounted');
+  }
+}
+```
+
+## mounted
+
+在实例挂载之后被调用。
+
+```javascript
+export default {
+  mounted() {
+    console.log('mounted');
+  }
+}
+```
+
+## beforeUpdate
+
+在数据更新之前被调用。
+
+```javascript
+export default {
+  data() {
+    return {
+      message: 'hello'
+    }
+  },
+  methods: {
+    updateMessage() {
+      this.message = 'world';
+    }
+  },
+  beforeUpdate() {
+    console.log('beforeUpdate');
+  },
+  updated() {
+    console.log('updated');
+  }
+}
+```
+
+
+## updated
+
+在数据更新之后被调用。
+
+```javascript
+export default {
+  updated() {
+    console.log('updated');
+  }
+}
+```
+
+## beforeDestroy
+
+在实例销毁之前被调用。
+
+```javascript
+export default {
+  beforeDestroy() {
+    console.log('beforeDestroy');
+  },
+  destroyed() {
+    console.log('destroyed');
+  }
+}
+```
+
+## destroyed
+
+在实例销毁之后被调用。
+
+```javascript
+export default {
+  destroyed() {
+    console.log('destroyed');
+  }
+}
+```
+
+## activated
+
+在keep-alive组件激活时调用。
+
+```javascript
+export default {
+  activated() {
+    console.log('activated');
+  }
+}
+```
+
+## deactivated
+
+在keep-alive组件停用时调用。
+
+```javascript
+export default {
+  deactivated() {
+    console.log('deactivated');
+  }
+}
+```
+
+
+## errorCaptured
+
+在捕获一个来自子组件的错误时被调用。
+
+```javascript
+export default {
+  errorCaptured(err, vm, info) {
+    console.log(err, vm, info);
+  }
+}
+```

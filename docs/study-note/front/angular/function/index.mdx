@@ -1,0 +1,205 @@
+---
+sidebar_position: 1
+title: 常用函数
+sidebar_label: 常用函数
+---
+
+angular 提供了OnChanges, OnInit, DoCheck, AfterContentInit,
+AfterContentChecked, AfterViewInit, AfterViewChecked, OnDestroy生命周期函数。
+
+## OnChanges
+
+OnChanges 是一个接口，当组件的输入属性发生变化时，会触发该函数。
+
+```typescript
+import { Component, Input, OnChanges } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+  `
+})
+export class MyComponent implements OnChanges {
+  @Input() name: string;
+
+  ngOnChanges() {
+    console.log('Input changed:', this.name);
+  }
+}
+```
+
+## OnInit
+
+OnInit 是一个接口，在组件初始化时，会触发该函数。
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+  `
+})
+export class MyComponent implements OnInit {
+  name: string;
+
+  ngOnInit() {
+    this.name = 'John';
+  }
+}
+```
+
+## DoCheck
+
+DoCheck 是一个接口，在组件的任何数据变化时，都会触发该函数。
+
+```typescript
+import { Component, DoCheck } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+  `
+})
+export class MyComponent implements DoCheck {
+  name: string;
+
+  ngDoCheck() {
+    console.log('Do check');
+  }
+}
+```
+
+## AfterContentInit
+
+AfterContentInit 是一个接口，在组件的内容初始化之后，会触发该函数。
+
+```typescript
+import { Component, AfterContentInit } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+    <div>
+      <p>Child component</p>
+    </div>
+  `
+})
+export class MyComponent implements AfterContentInit {
+  name: string;
+
+  ngAfterContentInit() {
+    console.log('Content initialized');
+  }
+}
+```
+
+
+
+
+## AfterContentChecked
+
+AfterContentChecked 是一个接口，在组件的内容变化之后，会触发该函数。
+
+```typescript
+import { Component, AfterContentChecked } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+    <div>
+      <p>Child component</p>
+    </div>
+  `
+})
+export class MyComponent implements AfterContentChecked {
+  name: string;
+
+  ngAfterContentChecked() {
+    console.log('Content checked');
+  }
+}
+```
+
+## AfterViewInit
+
+AfterViewInit 是一个接口，在组件的视图初始化之后，会触发该函数。
+
+```typescript
+import { Component, AfterViewInit } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+    <div>
+      <p>Child component</p>
+    </div>
+  `
+})
+export class MyComponent implements AfterViewInit {
+  name: string;
+
+  ngAfterViewInit() {
+    console.log('View initialized');
+  }
+}
+```
+
+
+
+## AfterViewChecked
+
+AfterViewChecked 是一个接口，在组件的视图变化之后，会触发该函数。
+
+```typescript
+import { Component, AfterViewChecked } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+    <div>
+      <p>Child component</p>
+    </div>
+  `
+})
+export class MyComponent implements AfterViewChecked {
+  name: string;
+
+  ngAfterViewChecked() {
+    console.log('View checked');
+  }
+}
+```
+
+## OnDestroy
+
+OnDestroy 是一个接口，在组件销毁时，会触发该函数。
+
+```typescript
+import { Component, OnDestroy } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  template: `
+    <p>My name is {{ name }}</p>
+  `
+})
+export class MyComponent implements OnDestroy {
+  name: string;
+
+  ngOnDestroy() {
+    console.log('Component destroyed');
+  }
+}
+```
+
+
+
+## 不建议深入学习，完成英雄之旅就可！！！

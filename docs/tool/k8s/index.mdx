@@ -4,4 +4,67 @@ title: k8s
 sidebar_label: k8s
 ---
 
-# Kubernetes
+## 官网
+
+- [kubernetes.io](https://kubernetes.io/)
+
+## 参考资料
+
+- [Kubernetes 官方文档中文版](https://kubernetes.feisky.xyz/)
+
+## 常用配置文件
+- [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+- [Service](https://kubernetes.io/docs/concepts/services-networking/service/)
+- [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
+- [Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
+- [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+- [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+- [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
+- [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)
+- [Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/)
+- [CronJob](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/)
+- [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
+- [StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)
+- [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+- [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims)
+- [NodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
+
+## 启动容器示例
+启动一个nginx容器示例：
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+```
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+```
