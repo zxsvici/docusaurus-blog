@@ -74,7 +74,7 @@ const config = {
                     {
                         type: 'docSidebar',
                         sidebarId: 'projectSidebar',
-                        label: '项目经验',
+                        label: '个人项目',
                         position: "left"
                     },
                     {
@@ -89,12 +89,38 @@ const config = {
                         label: '学习笔记',
                         position: "left"
                     },
-                    // {to: '/blog', label: 'Blog', position: 'left'},
                     {
-                        href: 'https://github.com/facebook/docusaurus',
-                        label: 'GitHub',
-                        position: 'right',
+                        type: 'docSidebar',
+                        sidebarId: 'workSidebar',
+                        label: '工作随笔',
+                        position: "left"
                     },
+                    {
+                        type: 'docSidebar',
+                        sidebarId: 'dataSidebar',
+                        label: '数据结构与算法',
+                        position: "left"
+                    },
+                    {
+                        type: 'docSidebar',
+                        sidebarId: 'toolSidebar',
+                        label: '工具',
+                        position: "left"
+                    },
+                    // 配置一个下拉菜单
+                    // {
+                    //     type: 'dropdown',
+                    //     label: '学习笔记',
+                    //     position: 'left',
+                    //     items: [
+                    //         {
+                    //             type: 'docSidebar',
+                    //             sidebarId: 'javaSidebar',
+                    //             label: 'Java',
+                    //         }
+                    //     ],
+                    // },
+                    // {to: '/blog', label: 'Blog', position: 'left'},
                 ],
             },
             footer: {
@@ -105,7 +131,7 @@ const config = {
                         items: [
                             {
                                 label: '项目经验',
-                                to: '/docs/personal-project/study/openresty-tcp-gateway',
+                                to: '/docs/personal-project/openresty-tcp-gateway',
                             },
                         ],
                     },

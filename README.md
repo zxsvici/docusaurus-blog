@@ -83,8 +83,8 @@ npm i docusaurus-lunr-search  --save
 npm install @node-rs/jieba
 ```
 此插件需要打包生成索引才可生效，所以开发时会一直显示loading，打包运行就会回复正常。<br/>
-![dev_running](./img/search_dev_running.png)
-![build_running](./img/search_build_running.png)
+![dev_running](./docs/personal-project/docusaurus-blog/img/search_build_running.png)
+![build_running](./docs/personal-project/docusaurus-blog/img/search_build_running.png)
 
 ## shell 定时脚本
 ```shell title='blog_rebuild_task.sh'

@@ -1,0 +1,185 @@
+---
+sidebar_position: 1
+title: 持久化与恢复
+sidebar_label: 持久化与恢复
+---
+## 持久化卷
+定义一个 Deployment，部署了一个 Nginx，并挂载了一个持久化卷用于存储数据。
+```yaml title="deployment.yaml"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.20.2
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-persistent-storage
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: nginx-persistent-storage
+        persistentVolumeClaim:
+          claimName: nginx-pvc
+```
+
+```yaml title="pvc.yaml"
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nginx-pvc    # 与 deployment.yaml 中 volumeMounts 中的 name 保持一致
+spec:
+  accessModes:
+    - ReadWriteOnce # 单节点读写， 多节点读写为 ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+
+## 持久化卷快照
+配置完上面后，我们仍然可以追加一个卷快照策略，用于定时备份数据。
+```yaml title="deployment.yaml"
+# 仅展示追加的内容
+spec:
+  template:
+    spec:
+      volumes:
+      - name: nginx-persistent-storage-snapshot
+        persistentVolumeClaim:
+          claimName: nginx-pvc-snapshot
+          readOnly: true
+```
+
+定义快照指向上面定义的 PVC。
+```yaml title="pvc-snapshot.yaml"
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nginx-pvc-snapshot
+spec:
+  accessModes:
+    - ReadWriteOnce # 单节点读写， 多节点读写为 ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  dataSource:
+    name: nginx-pvc
+    kind: PersistentVolumeClaim
+```
+
+配置定时任务，每天凌晨0点0分执行一次备份操作。
+```yaml title="cronjob.yaml"
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: nginx-snapshot-job
+spec:
+  schedule: "0 0 * * *" # 每天凌晨0点0分执行一次，格式为 "分 时 天 月 年"
+  concurrencyPolicy: Forbid # 禁止并发执行
+  successfulJobsHistoryLimit: 1 # 只保留最近一次成功的任务，生产环境可以设置为 10
+  failedJobsHistoryLimit: 1 # 只保留最近一次失败的任务，生产环境可以设置为 3
+  startingDeadlineSeconds: 600 # 任务最长执行时间，超过这个时间则任务会被自动取消并告警
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: snapshot
+            image: busybox
+            command:
+            - sh
+            - -c
+            - "cp -r /usr/share/nginx/html /backup/html-$(date +%Y%m%d%H%M%S)"
+            volumeMounts:
+            - name: nginx-persistent-storage-snapshot
+              mountPath: /backup
+          volumes:
+          - name: nginx-persistent-storage-snapshot
+            persistentVolumeClaim:
+              claimName: nginx-pvc-snapshot
+```
+
+## 数据恢复
+当出现磁盘损坏、机器故障等情况时，我们可以利用快照数据恢复到新机器上。
+
+首先，创建一个新的 PVC，指向快照数据所在的 PV。
+```yaml title="pvc-restore.yaml"
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nginx-pvc-restore
+spec:
+  accessModes:
+    - ReadWriteOnce # 单节点读写， 多节点读写为 ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  dataSource:
+    name: nginx-pvc-snapshot
+    kind: PersistentVolumeClaim
+```
+
+
+然后，将原机器上的 Deployment 缩容到 0，并删除原 PVC。
+```shell
+# 缩容 Deployment
+kubectl scale deployment nginx-deployment --replicas=0
+# 删除原 PVC
+kubectl delete pvc nginx-pvc
+```
+
+
+最后，将新机器上的 PVC 挂载到 Deployment，恢复数据。
+```yaml title="deployment-restore.yaml"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.20.2
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-persistent-storage
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: nginx-persistent-storage
+        persistentVolumeClaim:
+          claimName: nginx-pvc-restore
+```
+
+
+恢复完成后，再将 Deployment 扩容到原配置。
+```shell
+# 扩容 Deployment
+kubectl scale deployment nginx-deployment --replicas=2
+# 验证数据是否恢复成功
+kubectl exec -it nginx-deployment-xxxxx -- ls /usr/share/nginx/html
+```

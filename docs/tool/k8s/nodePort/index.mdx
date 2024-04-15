@@ -1,0 +1,30 @@
+---
+sidebar_position: 1
+title: 修改NodePort范围
+sidebar_label: 修改NodePort范围
+---
+
+## 修改配置
+NodePort 默认范围是 30000-32767，略少,可在kube-apiserver.yaml中配置
+```yaml
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --advertise-address=172.17.216.80
+    - --allow-privileged=true
+    # others
+    - --service-node-port-range=xxx-xxx
+```
+
+## 重启服务
+```shell
+# 查找服务的pod名称
+kubectl get pods -n kube-system | grep apiserver
+# 干掉他
+kubectl delete pod -n kube-system <pod-name>
+# 等待重启完成
+kubectl get pods -n kube-system -w | grep apiserver
+# 验证修改是否生效
+kubectl describe pod <pod-name> -n kube-system
+```
