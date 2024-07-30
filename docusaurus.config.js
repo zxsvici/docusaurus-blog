@@ -107,6 +107,12 @@ const config = {
                         label: '工具',
                         position: "left"
                     },
+                    // {
+                    //     type: 'docSidebar',
+                    //     sidebarId: 'interviewSidebar',
+                    //     label: '面试',
+                    //     position: "left"
+                    // },
                     // 配置一个下拉菜单
                     // {
                     //     type: 'dropdown',
@@ -167,7 +173,7 @@ const config = {
                         ],
                     },
                 ],
-                copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+                copyright: 'Copyright © 2024 - <a href="https://beian.miit.gov.cn/">皖ICP备2021010576号-2 </a>',
             },
             prism: {
                 theme: prismThemes.github,
